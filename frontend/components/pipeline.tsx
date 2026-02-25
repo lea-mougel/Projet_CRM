@@ -6,7 +6,7 @@ interface Lead {
   id: string;
   title: string;
   amount: number;
-  status: 'nouveau' | 'en_cours' | 'gagné' | 'perdu';
+  status: 'nouveau' | 'en cours' | 'converti' | 'perdu';
   source?: string;
   description?: string;
   estimated_value?: number;
@@ -47,8 +47,8 @@ export default function Pipeline() {
 
   const statuses = [
     { id: 'nouveau', label: 'Nouveau', color: 'bg-blue-500' },
-    { id: 'en_cours', label: 'En Cours', color: 'bg-yellow-500' },
-    { id: 'gagné', label: 'Gagné', color: 'bg-green-500' },
+    { id: 'en cours', label: 'En Cours', color: 'bg-yellow-500' },
+    { id: 'converti', label: 'Converti', color: 'bg-green-500' },
     { id: 'perdu', label: 'Perdu', color: 'bg-red-500' }
   ];
 
@@ -124,8 +124,8 @@ export default function Pipeline() {
                 <span className="font-semibold text-slate-700">Statut:</span>
                 <span className={`inline-block ml-2 px-3 py-1 rounded-lg text-white font-bold text-sm ${
                   selectedLead.status === 'nouveau' ? 'bg-blue-500' :
-                  selectedLead.status === 'en_cours' ? 'bg-yellow-500' :
-                  selectedLead.status === 'gagné' ? 'bg-green-500' :
+                  selectedLead.status === 'en cours' ? 'bg-yellow-500' :
+                  selectedLead.status === 'converti' ? 'bg-green-500' :
                   'bg-red-500'
                 }`}>
                   {selectedLead.status}

@@ -78,6 +78,43 @@ export type CompanyPayload = {
   town?: string;
 };
 
+export type Lead = {
+  id: string;
+  title: string;
+  estimated_value?: number;
+  status: 'nouveau' | 'en cours' | 'converti' | 'perdu';
+  company_id?: string | null;
+  contact_id?: string | null;
+  source?: string | null;
+  description?: string | null;
+  assigned_to?: string | null;
+  contacts?: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+  } | null;
+  companies?: {
+    id: string;
+    name: string;
+    industry?: string;
+  } | null;
+  assigned_commercial?: {
+    id?: string;
+    email?: string;
+  } | null;
+};
+
+export type CreateLeadPayload = {
+  title: string;
+  estimated_value?: number;
+  status?: 'nouveau' | 'en cours' | 'converti' | 'perdu';
+  company_id?: string | null;
+  contact_id?: string | null;
+  source?: string | null;
+  description?: string | null;
+};
+
 export type ContactNote = {
   id: string;
   contact_id: string;
@@ -253,5 +290,57 @@ export const contactsApi = {
     });
 
     return parseResponse<Contact[]>(response);
+  },
+
+  async getAllLeads(): Promise<Lead[]> {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/leads`, {
+      method: 'GET',
+      headers,
+    });
+
+    return parseResponse<Lead[]>(response);
+  },
+
+  async getLeadById(id: string): Promise<Lead> {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/leads/${id}`, {
+      method: 'GET',
+      headers,
+    });
+
+    return parseResponse<Lead>(response);
+  },
+
+  async createLead(payload: CreateLeadPayload): Promise<Lead> {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/leads`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload),
+    });
+
+    return parseResponse<Lead>(response);
+  },
+
+  async updateLead(id: string, payload: Partial<CreateLeadPayload>): Promise<Lead> {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/leads/${id}`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify(payload),
+    });
+
+    return parseResponse<Lead>(response);
+  },
+
+  async deleteLead(id: string): Promise<{ success: boolean }> {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/leads/${id}`, {
+      method: 'DELETE',
+      headers,
+    });
+
+    return parseResponse<{ success: boolean }>(response);
   },
 };

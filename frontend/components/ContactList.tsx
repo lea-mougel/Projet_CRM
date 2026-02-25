@@ -305,7 +305,7 @@ const ContactList = ({ currentUser, mode = 'all' }: ContactListProps) => {
             <tr>
               <th className="p-4">Contact</th>
               <th className="p-4">Entreprise</th>
-              <th className="p-4">Commercial</th>
+              <th className="p-4">Commercial (contact principal)</th>
             </tr>
           </thead>
           <tbody>
@@ -449,7 +449,7 @@ const ContactList = ({ currentUser, mode = 'all' }: ContactListProps) => {
                       <p><span className="font-semibold">Nom :</span> {selectedContact.first_name} {selectedContact.last_name}</p>
                       <p><span className="font-semibold">Email :</span> {selectedContact.email}</p>
                       <p><span className="font-semibold">Téléphone :</span> {selectedContact.phone || 'Non renseigné'}</p>
-                      <p><span className="font-semibold">Commercial :</span> {selectedContact.assigned_commercial?.email || 'Non assigné'}</p>
+                      <p><span className="font-semibold">Commercial (contact principal) :</span> {selectedContact.assigned_commercial?.email || 'Non assigné'}</p>
                       <div className="pt-2">
                         <span className="font-semibold">Entreprise :</span>{' '}
                         {selectedContact.company?.id ? (

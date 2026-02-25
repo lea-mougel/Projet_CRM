@@ -381,7 +381,7 @@ export default function CompaniesPage() {
                 <div key={contact.id} className="border border-slate-200 rounded-lg p-3">
                   <div className="font-semibold">{contact.first_name} {contact.last_name}</div>
                   <div className="text-sm text-gray-500">{contact.email}</div>
-                  <div className="text-sm italic">Commercial: {contact.assigned_commercial?.email || 'Non assigné'}</div>
+                  <div className="text-sm italic">Commercial (contact principal): {contact.assigned_commercial?.email || 'Non assigné'}</div>
                 </div>
               ))}
               {selectedCompany.contacts.length === 0 && !showAddContact && (
