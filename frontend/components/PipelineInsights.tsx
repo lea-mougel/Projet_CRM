@@ -1,5 +1,16 @@
 'use client';
 
+import type { ReactNode } from 'react';
+import {
+  CircleDollarSign,
+  BarChart3,
+  Percent,
+  Target,
+  Sparkles,
+  Settings2,
+  CheckCircle2,
+  XCircle,
+} from 'lucide-react';
 import { Lead } from '../api/contacts.api';
 
 interface PipelineInsightsProps {
@@ -58,25 +69,25 @@ export default function PipelineInsights({ leads, userRole = 'user' }: PipelineI
           <KPICard
             title="Valeur totale du pipeline"
             value={`${totalValue.toLocaleString()} €`}
-            icon="💰"
+            icon={<CircleDollarSign className="w-5 h-5" />}
             color="from-blue-50 to-blue-100"
           />
           <KPICard
             title="Valeur moyenne"
             value={`${avgValue.toLocaleString()} €`}
-            icon="📊"
+            icon={<BarChart3 className="w-5 h-5" />}
             color="from-green-50 to-green-100"
           />
           <KPICard
             title="Taux de conversion"
             value={`${convertionRate.toFixed(1)}%`}
-            icon="📈"
+            icon={<Percent className="w-5 h-5" />}
             color="from-purple-50 to-purple-100"
           />
           <KPICard
             title="Nombre total de leads"
             value={leads.length}
-            icon="🎯"
+            icon={<Target className="w-5 h-5" />}
             color="from-yellow-50 to-yellow-100"
           />
         </div>
@@ -91,28 +102,28 @@ export default function PipelineInsights({ leads, userRole = 'user' }: PipelineI
             count={leadsByStatus.nouveau.length}
             value={leadsByStatus.nouveau.reduce((acc, l) => acc + (Number(l.estimated_value) || 0), 0)}
             color="#3b82f6"
-            icon="🆕"
+            icon={<Sparkles className="w-5 h-5" />}
           />
           <StatusCard
             title="En Cours"
             count={leadsByStatus['en cours'].length}
             value={leadsByStatus['en cours'].reduce((acc, l) => acc + (Number(l.estimated_value) || 0), 0)}
             color="#eab308"
-            icon="⚙️"
+            icon={<Settings2 className="w-5 h-5" />}
           />
           <StatusCard
             title="Converti"
             count={leadsByStatus.converti.length}
             value={leadsByStatus.converti.reduce((acc, l) => acc + (Number(l.estimated_value) || 0), 0)}
             color="#22c55e"
-            icon="✅"
+            icon={<CheckCircle2 className="w-5 h-5" />}
           />
           <StatusCard
             title="Perdu"
             count={leadsByStatus.perdu.length}
             value={leadsByStatus.perdu.reduce((acc, l) => acc + (Number(l.estimated_value) || 0), 0)}
             color="#ef4444"
-            icon="❌"
+            icon={<XCircle className="w-5 h-5" />}
           />
         </div>
       </div>
@@ -230,7 +241,7 @@ export default function PipelineInsights({ leads, userRole = 'user' }: PipelineI
 interface KPICardProps {
   title: string;
   value: string | number;
-  icon: string;
+  icon: ReactNode;
   color: string;
 }
 
@@ -239,7 +250,7 @@ function KPICard({ title, value, icon, color }: KPICardProps) {
     <div className={`bg-gradient-to-br ${color} rounded-lg p-6 border border-slate-200`}>
       <div className="flex items-center justify-between mb-2">
         <p className="text-sm text-slate-600">{title}</p>
-        <span className="text-2xl">{icon}</span>
+        <span className="text-slate-700">{icon}</span>
       </div>
       <p className="text-2xl font-bold text-slate-900">{value}</p>
     </div>
@@ -251,7 +262,7 @@ interface StatusCardProps {
   count: number;
   value: number;
   color: string;
-  icon: string;
+  icon: ReactNode;
 }
 
 function StatusCard({ title, count, value, color, icon }: StatusCardProps) {
@@ -259,7 +270,7 @@ function StatusCard({ title, count, value, color, icon }: StatusCardProps) {
     <div className="border-l-4 rounded-lg p-6 bg-white" style={{ borderLeftColor: color }}>
       <div className="flex items-center justify-between mb-3">
         <h4 className="font-semibold text-slate-900">{title}</h4>
-        <span className="text-2xl">{icon}</span>
+        <span style={{ color }}>{icon}</span>
       </div>
       <div className="space-y-2 text-sm">
         <div className="flex justify-between">

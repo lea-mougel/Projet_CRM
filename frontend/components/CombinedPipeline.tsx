@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Sparkles, Settings2, CheckCircle2, XCircle, Columns3, Table2 } from 'lucide-react';
 import { Lead } from '../api/contacts.api';
 
 interface CombinedPipelineProps {
@@ -10,10 +11,10 @@ interface CombinedPipelineProps {
 export default function CombinedPipeline({ leads }: CombinedPipelineProps) {
   const [viewMode, setViewMode] = useState<'columns' | 'table'>('columns');
   const statuses = [
-    { id: 'nouveau', label: 'Nouveau', icon: '🆕', color: '#3b82f6' },
-    { id: 'en cours', label: 'En Cours', icon: '⚙️', color: '#eab308' },
-    { id: 'converti', label: 'Converti', icon: '✅', color: '#22c55e' },
-    { id: 'perdu', label: 'Perdu', icon: '❌', color: '#ef4444' },
+    { id: 'nouveau', label: 'Nouveau', icon: Sparkles, color: '#3b82f6' },
+    { id: 'en cours', label: 'En Cours', icon: Settings2, color: '#eab308' },
+    { id: 'converti', label: 'Converti', icon: CheckCircle2, color: '#22c55e' },
+    { id: 'perdu', label: 'Perdu', icon: XCircle, color: '#ef4444' },
   ];
 
   // Calculer les stats par étape
@@ -63,7 +64,7 @@ export default function CombinedPipeline({ leads }: CombinedPipelineProps) {
               : 'bg-transparent text-slate-700 hover:bg-slate-200'
           }`}
         >
-          📊 Colonnes
+          <span className="inline-flex items-center gap-2"><Columns3 className="w-4 h-4" />Colonnes</span>
         </button>
         <button
           onClick={() => setViewMode('table')}
@@ -73,7 +74,7 @@ export default function CombinedPipeline({ leads }: CombinedPipelineProps) {
               : 'bg-transparent text-slate-700 hover:bg-slate-200'
           }`}
         >
-          📋 Tableau
+          <span className="inline-flex items-center gap-2"><Table2 className="w-4 h-4" />Tableau</span>
         </button>
       </div>
 
@@ -81,6 +82,9 @@ export default function CombinedPipeline({ leads }: CombinedPipelineProps) {
       {viewMode === 'columns' && (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((status, index) => (
+          (() => {
+            const Icon = status.icon;
+            return (
           <div
             key={status.id}
             className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl p-6 border-l-4"
@@ -89,7 +93,7 @@ export default function CombinedPipeline({ leads }: CombinedPipelineProps) {
             {/* Header de colonne */}
             <div className="mb-4 pb-4 border-b">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-2xl">{status.icon}</span>
+                <Icon className="w-5 h-5" style={{ color: status.color }} />
                 <h3 className="font-bold text-slate-900">{status.label}</h3>
               </div>
               <p className="text-sm text-slate-600">
@@ -139,6 +143,8 @@ export default function CombinedPipeline({ leads }: CombinedPipelineProps) {
               </div>
             </div>
           </div>
+            );
+          })()
         ))}
       </div>
       )}

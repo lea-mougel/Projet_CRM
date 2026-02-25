@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
+import { Target } from 'lucide-react';
 import { contactsApi, Lead } from '../../api/contacts.api';
 import CommercialsList from '../../components/CommercialsList';
 
@@ -106,7 +107,7 @@ export default function CommercialsPage() {
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center text-white font-bold">
-              🎯
+              <Target className="w-5 h-5" />
             </div>
             <h1 className="text-2xl font-bold text-slate-900">Gestion des Commerciaux</h1>
           </div>

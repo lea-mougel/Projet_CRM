@@ -127,6 +127,34 @@ export type ContactNote = {
   };
 };
 
+export type Task = {
+  id: string;
+  title: string;
+  due_date?: string | null;
+  is_completed: boolean;
+  contact_id?: string | null;
+  lead_id?: string | null;
+  user_id?: string | null;
+  contact?: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+  } | null;
+  lead?: {
+    id: string;
+    title: string;
+    status: 'nouveau' | 'en cours' | 'converti' | 'perdu';
+  } | null;
+};
+
+export type TaskPayload = {
+  title: string;
+  due_date?: string;
+  contact_id?: string;
+  lead_id?: string;
+};
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
 async function getAuthHeaders(): Promise<Record<string, string>> {
@@ -352,5 +380,47 @@ export const contactsApi = {
       .single();
     
     return data || { role: 'user' };
+  },
+
+  async getAllTasks(): Promise<Task[]> {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/tasks`, {
+      method: 'GET',
+      headers,
+    });
+
+    return parseResponse<Task[]>(response);
+  },
+
+  async createTask(payload: TaskPayload): Promise<Task> {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/tasks`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload),
+    });
+
+    return parseResponse<Task>(response);
+  },
+
+  async updateTask(id: string, payload: Partial<TaskPayload> & { is_completed?: boolean }): Promise<Task> {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/tasks/${id}`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify(payload),
+    });
+
+    return parseResponse<Task>(response);
+  },
+
+  async deleteTask(id: string): Promise<{ success: boolean }> {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/tasks/${id}`, {
+      method: 'DELETE',
+      headers,
+    });
+
+    return parseResponse<{ success: boolean }>(response);
   },
 };

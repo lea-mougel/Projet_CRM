@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { createClient } from '@supabase/supabase-js';
+import { ShieldAlert, Megaphone, Settings, Pencil } from 'lucide-react';
 
 type DashboardSession = {
   user: {
@@ -21,8 +22,24 @@ type ContactRecord = {
 
 type LeadRecord = {
   id: string;
+  title?: string;
   status: string;
   estimated_value: number | string;
+  updated_at?: string;
+};
+
+type TaskRecord = {
+  id: string;
+  title: string;
+  due_date?: string | null;
+  is_completed: boolean;
+  contact?: {
+    first_name?: string;
+    last_name?: string;
+  } | null;
+  lead?: {
+    title?: string;
+  } | null;
 };
 
 type ProfileRecord = {
@@ -41,38 +58,61 @@ export default function Dashboard({ session }: { session: DashboardSession }) {
   const [role, setRole] = useState<string>('chargement');
   const [contacts, setContacts] = useState<ContactRecord[]>([]);
   const [leads, setLeads] = useState<LeadRecord[]>([]);
+  const [tasks, setTasks] = useState<TaskRecord[]>([]);
   const [allProfiles, setAllProfiles] = useState<ProfileRecord[]>([]);
   const [showRoleManager, setShowRoleManager] = useState(false);
+  const [taskView, setTaskView] = useState<'today' | 'tomorrow' | 'week'>('today');
+  const [hotLeadThreshold, setHotLeadThreshold] = useState<number>(10000);
+  const [hotLeadThresholdDraft, setHotLeadThresholdDraft] = useState<string>('10000');
+  const [isEditingHotLeadThreshold, setIsEditingHotLeadThreshold] = useState(false);
   const [loading, setLoading] = useState(true);
   const [adminMessage, setAdminMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    const savedThreshold = localStorage.getItem('crm-hot-lead-threshold');
+    if (savedThreshold) {
+      const parsed = Number(savedThreshold);
+      if (!Number.isNaN(parsed) && parsed >= 0) {
+        setHotLeadThreshold(parsed);
+        setHotLeadThresholdDraft(String(parsed));
+      }
+    }
+  }, []);
+
+  const saveHotLeadThreshold = () => {
+    const nextValue = Math.max(0, Number(hotLeadThresholdDraft) || 0);
+    setHotLeadThreshold(nextValue);
+    setHotLeadThresholdDraft(String(nextValue));
+    localStorage.setItem('crm-hot-lead-threshold', String(nextValue));
+    setIsEditingHotLeadThreshold(false);
+  };
 
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
       
-      // 1. Récupérer le rôle (Sécurisé par RLS)
       const { data: profile, error } = await supabase
         .from('profiles')
         .select('role')
         .eq('id', session.user.id)
         .maybeSingle();
 
-      if (error) console.error("Erreur Supabase :", error.message);
+      if (error) console.error('Erreur Supabase :', error.message);
 
       if (profile) {
         setRole(profile.role);
-        
-        // 2. Charger les données si Admin ou Commercial
+
         if (profile.role === 'admin' || profile.role === 'commercial') {
           const headers = { 'X-User-Id': session.user.id };
-          const [resC, resL] = await Promise.all([
+          const [resC, resL, resT] = await Promise.all([
             fetch('http://localhost:3000/contacts', { headers }),
-            fetch('http://localhost:3000/leads', { headers })
+            fetch('http://localhost:3000/leads', { headers }),
+            fetch('http://localhost:3000/tasks', { headers }),
           ]);
           if (resC.ok) setContacts(await resC.json());
           if (resL.ok) setLeads(await resL.json());
-          
-          // 3. Charger la liste des membres pour l'assignation/gestion
+          if (resT.ok) setTasks(await resT.json());
+
           const { data: pro } = await supabase.from('profiles').select('*').order('email');
           if (pro) setAllProfiles(pro);
         }
@@ -80,31 +120,27 @@ export default function Dashboard({ session }: { session: DashboardSession }) {
         setRole('user');
       }
     } catch (err) {
-      console.error("Erreur système :", err);
+      console.error('Erreur système :', err);
     } finally {
       setLoading(false);
     }
   }, [session.user.id, supabase]);
 
-  useEffect(() => { loadData(); }, [loadData]);
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    localStorage.clear();
-    window.location.href = '/login';
-  };
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const assignContact = async (contactId: string, commercialId: string) => {
     const { error } = await supabase
       .from('contacts')
-      .update({ assigned_to: commercialId === "none" ? null : commercialId })
+      .update({ assigned_to: commercialId === 'none' ? null : commercialId })
       .eq('id', contactId);
 
     if (!error) {
-      setAdminMessage("✅ Contact réassigné !");
+      setAdminMessage('Contact réassigné.');
       loadData();
     } else {
-      setAdminMessage("❌ Erreur : Permission refusée.");
+      setAdminMessage('Erreur : Permission refusée.');
     }
   };
 
@@ -119,18 +155,83 @@ export default function Dashboard({ session }: { session: DashboardSession }) {
       setAdminMessage(`Grade modifié : ${nextRole.toUpperCase()}`);
       loadData();
     } else {
-      setAdminMessage("❌ Erreur : Seul un Admin peut faire ça.");
+      setAdminMessage('Erreur : Seul un Admin peut faire ça.');
     }
   };
 
   const totalValue = leads.reduce((acc, curr) => acc + (Number(curr.estimated_value) || 0), 0);
-  const commercialsOnly = allProfiles.filter(p => p.role === 'commercial' || p.role === 'admin');
-  const visibleContacts = role === 'commercial'
-    ? contacts.filter((contact) => !contact.assigned_to || contact.assigned_to === session.user.id)
-    : contacts;
+  const commercialsOnly = allProfiles.filter((p) => p.role === 'commercial' || p.role === 'admin');
+  const visibleContacts =
+    role === 'commercial'
+      ? contacts.filter((contact) => !contact.assigned_to || contact.assigned_to === session.user.id)
+      : contacts;
   const previewContacts = visibleContacts.slice(0, 3);
 
-  if (loading) return <div className="p-20 text-center font-black text-blue-600 animate-pulse">VÉRIFICATION DES ACCÈS...</div>;
+  const filteredTasks = useMemo(() => {
+    const startOfDay = (date: Date) => {
+      const value = new Date(date);
+      value.setHours(0, 0, 0, 0);
+      return value;
+    };
+
+    const endOfDay = (date: Date) => {
+      const value = new Date(date);
+      value.setHours(23, 59, 59, 999);
+      return value;
+    };
+
+    const now = new Date();
+    const todayStart = startOfDay(now);
+    const todayEnd = endOfDay(now);
+
+    const tomorrowStart = startOfDay(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1));
+    const tomorrowEnd = endOfDay(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1));
+
+    const weekEnd = endOfDay(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7));
+
+    return tasks
+      .filter((task) => !!task.due_date)
+      .filter((task) => {
+        const dueDate = new Date(task.due_date as string);
+        if (taskView === 'today') return dueDate >= todayStart && dueDate <= todayEnd;
+        if (taskView === 'tomorrow') return dueDate >= tomorrowStart && dueDate <= tomorrowEnd;
+        return dueDate >= todayStart && dueDate <= weekEnd;
+      })
+      .sort((a, b) => new Date(a.due_date as string).getTime() - new Date(b.due_date as string).getTime());
+  }, [tasks, taskView]);
+
+  const commercialLeadsChauds = useMemo(() => {
+    return leads
+      .filter((lead) => lead.status === 'en cours' || lead.status === 'nouveau')
+      .filter((lead) => (Number(lead.estimated_value) || 0) >= hotLeadThreshold)
+      .sort((a, b) => (Number(b.estimated_value) || 0) - (Number(a.estimated_value) || 0))
+      .slice(0, 6);
+  }, [leads, hotLeadThreshold]);
+
+  const commercialAlerts = useMemo(() => {
+    const now = new Date();
+    const in48h = new Date(now.getTime() + 48 * 60 * 60 * 1000);
+
+    const overdueTasks = tasks
+      .filter((task) => !task.is_completed && !!task.due_date)
+      .filter((task) => new Date(task.due_date as string) < now)
+      .sort((a, b) => new Date(a.due_date as string).getTime() - new Date(b.due_date as string).getTime())
+      .slice(0, 5);
+
+    const dueSoonTasks = tasks
+      .filter((task) => !task.is_completed && !!task.due_date)
+      .filter((task) => {
+        const dueDate = new Date(task.due_date as string);
+        return dueDate >= now && dueDate <= in48h;
+      })
+      .sort((a, b) => new Date(a.due_date as string).getTime() - new Date(b.due_date as string).getTime())
+      .slice(0, 5);
+
+    return { overdueTasks, dueSoonTasks };
+  }, [tasks]);
+
+  if (loading)
+    return <div className="p-20 text-center font-black text-blue-600 animate-pulse">VÉRIFICATION DES ACCÈS...</div>;
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900 pb-12 font-sans">
@@ -145,7 +246,7 @@ export default function Dashboard({ session }: { session: DashboardSession }) {
           <section className="bg-white p-8 rounded-[2.5rem] shadow-2xl border-2 border-purple-200 animate-in fade-in zoom-in duration-300">
             <h2 className="text-2xl font-black text-purple-900 uppercase italic mb-8">Administration des Rôles</h2>
             <div className="grid gap-4">
-              {allProfiles.map(u => (
+              {allProfiles.map((u) => (
                 <div key={u.id} className="flex items-center justify-between p-5 bg-slate-50 rounded-2xl border border-slate-200">
                   <div><p className="font-black text-sm">{u.email}</p></div>
                   <div className="flex items-center gap-4">
@@ -160,7 +261,7 @@ export default function Dashboard({ session }: { session: DashboardSession }) {
           <>
             {role === 'user' ? (
               <div className="bg-white p-20 rounded-[3rem] text-center border shadow-xl max-w-2xl mx-auto mt-10">
-                <div className="text-6xl mb-6">🔒</div>
+                <div className="flex justify-center mb-6"><ShieldAlert className="w-14 h-14 text-slate-500" /></div>
                 <h2 className="text-3xl font-black mb-4 uppercase italic">Accès restreint</h2>
                 <p className="text-slate-500 font-bold italic">Votre compte est en attente de validation. Contactez un Admin.</p>
               </div>
@@ -169,78 +270,201 @@ export default function Dashboard({ session }: { session: DashboardSession }) {
                 {role === 'admin' && (
                   <section className="p-8 bg-gradient-to-br from-purple-900 to-indigo-800 rounded-[2.5rem] text-white shadow-xl relative overflow-hidden">
                     <h2 className="text-2xl font-black mb-4 uppercase italic tracking-tighter">Console Admin</h2>
-                    {adminMessage && <div className="mb-4 p-2 bg-white/20 rounded-lg text-xs font-bold border border-white/30 italic">📢 {adminMessage}</div>}
-                    <button onClick={() => setShowRoleManager(true)} className="bg-white text-purple-900 px-7 py-3 rounded-2xl text-xs font-black uppercase shadow-2xl hover:scale-105 transition">⚙️ Gérer les membres</button>
+                    {adminMessage && <div className="mb-4 p-2 bg-white/20 rounded-lg text-xs font-bold border border-white/30 italic inline-flex items-center gap-2"><Megaphone className="w-4 h-4" />{adminMessage}</div>}
+                    <button onClick={() => setShowRoleManager(true)} className="bg-white text-purple-900 px-7 py-3 rounded-2xl text-xs font-black uppercase shadow-2xl hover:scale-105 transition inline-flex items-center gap-2"><Settings className="w-4 h-4" />Gérer les membres</button>
                   </section>
                 )}
 
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                  <section className="lg:col-span-5 bg-white rounded-[2.5rem] shadow-sm border border-slate-200 p-8 h-fit">
-                    <div className="flex flex-wrap items-center justify-between mb-4 gap-3">
-                      <h2 className="text-xl font-black text-slate-800 uppercase italic">Répertoire ({visibleContacts.length})</h2>
-                    </div>
-                    <div className="mb-8">
-                      <button
-                        onClick={() => {
-                          window.location.href = '/contacts';
-                        }}
-                        className="px-3 py-2 rounded-xl bg-blue-600 text-white text-[10px] font-black uppercase hover:bg-blue-700"
-                      >
-                        Plus de contacts
-                      </button>
-                    </div>
-                    <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
-                      {previewContacts.map(c => (
-                        <div key={c.id} className="p-5 bg-slate-50 rounded-[1.5rem] border border-slate-100 hover:border-blue-400 transition-all">
-                          <div className="mb-4">
-                            <p className="font-black text-slate-900">{c.first_name} {c.last_name}</p>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{c.email}</p>
-                          </div>
-                          <div className="pt-4 border-t border-slate-200">
-                            <label className="text-[9px] font-black text-slate-400 uppercase block mb-2 italic">Commercial Assigné :</label>
-                            {role === 'admin' ? (
-                              <select 
-                                value={c.assigned_to || "none"}
-                                onChange={(e) => assignContact(c.id, e.target.value)}
-                                className="w-full bg-white border-2 border-slate-200 p-2.5 rounded-xl text-[10px] font-black focus:border-blue-500 outline-none cursor-pointer"
-                              >
-                                <option value="none">-- Aucun --</option>
-                                {commercialsOnly.map(com => (
-                                  <option key={com.id} value={com.id}>{com.email}</option>
-                                ))}
-                              </select>
-                            ) : (
-                              <span className="text-blue-700 text-[10px] font-black uppercase tracking-tighter">
-                                {c.assigned_commercial?.email || 'NON ASSIGNÉ'}
-                              </span>
-                            )}
-                          </div>
+                {role === 'commercial' ? (
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    <section className="lg:col-span-7 bg-white rounded-[2rem] shadow-sm border border-slate-200 p-6">
+                      <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
+                        <h3 className="text-xl font-black text-slate-800 uppercase italic">Mes tâches</h3>
+                        <div className="flex gap-2">
+                          <button onClick={() => setTaskView('today')} className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase ${taskView === 'today' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700'}`}>Aujourd'hui</button>
+                          <button onClick={() => setTaskView('tomorrow')} className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase ${taskView === 'tomorrow' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700'}`}>Demain</button>
+                          <button onClick={() => setTaskView('week')} className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase ${taskView === 'week' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700'}`}>Semaine</button>
                         </div>
-                      ))}
-                      {previewContacts.length === 0 && (
-                        <p className="text-sm text-slate-500 italic">Aucun contact visible pour votre profil.</p>
-                      )}
-                    </div>
-                  </section>
+                      </div>
 
-                  <section className="lg:col-span-7 space-y-6">
-                    <h2 className="text-2xl font-black text-slate-800 uppercase italic">Pipeline ({totalValue.toLocaleString()} €)</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                      {['nouveau', 'en cours', 'converti', 'perdu'].map(st => (
-                        <div key={st} className="bg-slate-200/40 p-3 rounded-[1.5rem] border border-slate-200/50">
-                          <h3 className="font-black text-slate-400 uppercase text-[8px] mb-4 text-center tracking-widest">{st}</h3>
-                          <div className="space-y-3">
-                            {leads.filter(l => l.status === st).map(le => (
-                              <div key={le.id} className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
-                                <p className="text-[12px] font-black text-slate-900">{Number(le.estimated_value).toLocaleString()} €</p>
+                      <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+                        {filteredTasks.map((task) => (
+                          <div key={task.id} className="p-4 rounded-xl border border-slate-200 bg-slate-50">
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <p className="font-black text-slate-900 text-sm">{task.title}</p>
+                                <p className="text-[10px] text-slate-500 font-bold mt-1">{new Date(task.due_date as string).toLocaleString('fr-FR')}</p>
+                                {(task.contact || task.lead) && (
+                                  <p className="text-[10px] text-slate-500 font-bold mt-1">
+                                    {task.contact ? `Contact: ${task.contact.first_name || ''} ${task.contact.last_name || ''}` : ''}
+                                    {task.contact && task.lead ? ' • ' : ''}
+                                    {task.lead ? `Lead: ${task.lead.title || '-'}` : ''}
+                                  </p>
+                                )}
+                              </div>
+                              <span className={`px-2 py-1 rounded text-[9px] font-black uppercase ${task.is_completed ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                                {task.is_completed ? 'Terminée' : 'À faire'}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+
+                        {filteredTasks.length === 0 && <p className="text-sm text-slate-500 italic">Aucune tâche sur cette période.</p>}
+                      </div>
+
+                      <div className="mt-5">
+                        <button onClick={() => { window.location.href = '/tasks'; }} className="px-3 py-2 rounded-xl bg-blue-600 text-white text-[10px] font-black uppercase hover:bg-blue-700">Voir toutes les tâches</button>
+                      </div>
+                    </section>
+
+                    <section className="lg:col-span-5 bg-white rounded-[2rem] shadow-sm border border-slate-200 p-6">
+                      <div className="flex items-center justify-between gap-3 mb-4">
+                        <h3 className="text-xl font-black text-slate-800 uppercase italic">Leads chauds</h3>
+                        <button onClick={() => { window.location.href = '/leads'; }} className="px-3 py-2 rounded-xl bg-blue-600 text-white text-[10px] font-black uppercase hover:bg-blue-700">Voir leads</button>
+                      </div>
+
+                      <div className="mb-4 p-3 rounded-xl bg-slate-50 border border-slate-200">
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-sm font-bold text-slate-700">
+                            Seuil : {hotLeadThreshold.toLocaleString()} €
+                          </p>
+                          <button
+                            onClick={() => {
+                              setHotLeadThresholdDraft(String(hotLeadThreshold));
+                              setIsEditingHotLeadThreshold(true);
+                            }}
+                            className="p-2 rounded-lg border border-slate-300 bg-white text-slate-600 hover:text-blue-600 hover:border-blue-400 transition"
+                            title="Modifier le seuil"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                        </div>
+
+                        {isEditingHotLeadThreshold && (
+                          <div className="mt-3 flex items-center gap-2">
+                            <input
+                              type="number"
+                              min={0}
+                              step={500}
+                              value={hotLeadThresholdDraft}
+                              onChange={(e) => setHotLeadThresholdDraft(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') saveHotLeadThreshold();
+                                if (e.key === 'Escape') setIsEditingHotLeadThreshold(false);
+                              }}
+                              className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                            <button
+                              onClick={saveHotLeadThreshold}
+                              className="px-3 py-2 rounded-lg bg-blue-600 text-white text-xs font-black uppercase hover:bg-blue-700"
+                            >
+                              OK
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+                        {commercialLeadsChauds.map((lead) => (
+                          <div key={lead.id} className="p-4 rounded-xl border border-slate-200 bg-slate-50">
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <p className="font-black text-slate-900 text-sm">{lead.title || 'Lead sans titre'}</p>
+                                <p className="text-[10px] text-slate-500 font-bold mt-1 uppercase">{lead.status}</p>
+                              </div>
+                              <span className="text-[11px] font-black text-blue-700">{Number(lead.estimated_value).toLocaleString()} €</span>
+                            </div>
+                          </div>
+                        ))}
+                        {commercialLeadsChauds.length === 0 && <p className="text-sm text-slate-500 italic">Aucun lead chaud à traiter pour un seuil de {hotLeadThreshold.toLocaleString()} €.</p>}
+                      </div>
+                    </section>
+
+                    <section className="lg:col-span-12 bg-white rounded-[2rem] shadow-sm border border-slate-200 p-6">
+                      <h3 className="text-xl font-black text-slate-800 uppercase italic mb-5">Alertes & échéances</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+                          <p className="text-[11px] font-black uppercase text-red-700 mb-3">Tâches en retard ({commercialAlerts.overdueTasks.length})</p>
+                          <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                            {commercialAlerts.overdueTasks.map((task) => (
+                              <div key={task.id} className="rounded-lg bg-white border border-red-100 p-3">
+                                <p className="text-sm font-black text-slate-900">{task.title}</p>
+                                <p className="text-[10px] font-bold text-slate-500 mt-1">{new Date(task.due_date as string).toLocaleString('fr-FR')}</p>
                               </div>
                             ))}
+                            {commercialAlerts.overdueTasks.length === 0 && <p className="text-sm text-slate-500 italic">Aucune tâche en retard.</p>}
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  </section>
-                </div>
+
+                        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                          <p className="text-[11px] font-black uppercase text-amber-700 mb-3">À traiter sous 48h ({commercialAlerts.dueSoonTasks.length})</p>
+                          <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                            {commercialAlerts.dueSoonTasks.map((task) => (
+                              <div key={task.id} className="rounded-lg bg-white border border-amber-100 p-3">
+                                <p className="text-sm font-black text-slate-900">{task.title}</p>
+                                <p className="text-[10px] font-bold text-slate-500 mt-1">{new Date(task.due_date as string).toLocaleString('fr-FR')}</p>
+                              </div>
+                            ))}
+                            {commercialAlerts.dueSoonTasks.length === 0 && <p className="text-sm text-slate-500 italic">Aucune échéance critique.</p>}
+                          </div>
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    <section className="lg:col-span-5 bg-white rounded-[2.5rem] shadow-sm border border-slate-200 p-8 h-fit">
+                      <div className="flex flex-wrap items-center justify-between mb-4 gap-3">
+                        <h2 className="text-xl font-black text-slate-800 uppercase italic">Répertoire ({visibleContacts.length})</h2>
+                      </div>
+                      <div className="mb-8">
+                        <button onClick={() => { window.location.href = '/contacts'; }} className="px-3 py-2 rounded-xl bg-blue-600 text-white text-[10px] font-black uppercase hover:bg-blue-700">Plus de contacts</button>
+                      </div>
+                      <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+                        {previewContacts.map((c) => (
+                          <div key={c.id} className="p-5 bg-slate-50 rounded-[1.5rem] border border-slate-100 hover:border-blue-400 transition-all">
+                            <div className="mb-4">
+                              <p className="font-black text-slate-900">{c.first_name} {c.last_name}</p>
+                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{c.email}</p>
+                            </div>
+                            <div className="pt-4 border-t border-slate-200">
+                              <label className="text-[9px] font-black text-slate-400 uppercase block mb-2 italic">Commercial Assigné :</label>
+                              {role === 'admin' ? (
+                                <select value={c.assigned_to || 'none'} onChange={(e) => assignContact(c.id, e.target.value)} className="w-full bg-white border-2 border-slate-200 p-2.5 rounded-xl text-[10px] font-black focus:border-blue-500 outline-none cursor-pointer">
+                                  <option value="none">-- Aucun --</option>
+                                  {commercialsOnly.map((com) => (
+                                    <option key={com.id} value={com.id}>{com.email}</option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <span className="text-blue-700 text-[10px] font-black uppercase tracking-tighter">{c.assigned_commercial?.email || 'NON ASSIGNÉ'}</span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                        {previewContacts.length === 0 && <p className="text-sm text-slate-500 italic">Aucun contact visible pour votre profil.</p>}
+                      </div>
+                    </section>
+
+                    <section className="lg:col-span-7 space-y-6">
+                      <h2 className="text-2xl font-black text-slate-800 uppercase italic">Pipeline ({totalValue.toLocaleString()} €)</h2>
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                        {['nouveau', 'en cours', 'converti', 'perdu'].map((st) => (
+                          <div key={st} className="bg-slate-200/40 p-3 rounded-[1.5rem] border border-slate-200/50">
+                            <h3 className="font-black text-slate-400 uppercase text-[8px] mb-4 text-center tracking-widest">{st}</h3>
+                            <div className="space-y-3">
+                              {leads.filter((l) => l.status === st).map((le) => (
+                                <div key={le.id} className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+                                  <p className="text-[12px] font-black text-slate-900">{Number(le.estimated_value).toLocaleString()} €</p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+                  </div>
+                )}
               </div>
             )}
           </>

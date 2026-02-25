@@ -4,26 +4,36 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useMemo, useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
+import {
+  Home,
+  Users,
+  Building2,
+  BarChart3,
+  CheckSquare,
+  TrendingUp,
+  Briefcase,
+  LogOut,
+} from 'lucide-react';
 import { contactsApi } from '../api/contacts.api';
 
 type NavItem = {
   href: string;
-  icon: string;
+  icon: 'home' | 'contacts' | 'companies' | 'leads' | 'tasks' | 'pipeline' | 'commercials';
   label: string;
   key: string;
 };
 
 const baseNavItems: NavItem[] = [
-  { href: '/', icon: '🏠', label: 'Accueil', key: 'home' },
-  { href: '/my-contacts', icon: '👤', label: 'Mes contacts', key: 'my-contacts' },
-  { href: '/contacts', icon: '👥', label: 'Contacts', key: 'contacts' },
-  { href: '/companies', icon: '🏢', label: 'Entreprises', key: 'companies' },
-  { href: '/leads', icon: '📊', label: 'Leads', key: 'leads' },
-  { href: '/pipeline', icon: '📈', label: 'Pipeline', key: 'pipeline' },
+  { href: '/', icon: 'home', label: 'Accueil', key: 'home' },
+  { href: '/contacts?tab=my', icon: 'contacts', label: 'Contacts', key: 'contacts' },
+  { href: '/companies', icon: 'companies', label: 'Entreprises', key: 'companies' },
+  { href: '/leads', icon: 'leads', label: 'Leads', key: 'leads' },
+  { href: '/tasks', icon: 'tasks', label: 'Tâches', key: 'tasks' },
+  { href: '/pipeline', icon: 'pipeline', label: 'Pipeline', key: 'pipeline' },
 ];
 
 const adminNavItems: NavItem[] = [
-  { href: '/commercials', icon: '🎯', label: 'Commerciaux', key: 'commercials' },
+  { href: '/commercials', icon: 'commercials', label: 'Commerciaux', key: 'commercials' },
 ];
 
 export default function SideNavigation() {
@@ -89,6 +99,29 @@ export default function SideNavigation() {
     return false;
   };
 
+  const renderIcon = (icon: NavItem['icon']) => {
+    const className = 'w-6 h-6';
+
+    switch (icon) {
+      case 'home':
+        return <Home className={className} />;
+      case 'contacts':
+        return <Users className={className} />;
+      case 'companies':
+        return <Building2 className={className} />;
+      case 'leads':
+        return <BarChart3 className={className} />;
+      case 'tasks':
+        return <CheckSquare className={className} />;
+      case 'pipeline':
+        return <TrendingUp className={className} />;
+      case 'commercials':
+        return <Briefcase className={className} />;
+      default:
+        return <Home className={className} />;
+    }
+  };
+
   return (
     <aside className="fixed left-0 top-0 h-screen w-20 bg-white border-r-2 border-slate-200 shadow-sm flex flex-col items-center py-6 z-40">
       {/* Logo/App Name */}
@@ -113,7 +146,7 @@ export default function SideNavigation() {
                 isActive(item.href) ? 'scale-110' : 'scale-100 group-hover:scale-110'
               }`}
             >
-              {item.icon}
+              {renderIcon(item.icon)}
             </span>
 
             {/* Tooltip/Label on hover */}
@@ -137,7 +170,9 @@ export default function SideNavigation() {
         className="relative group flex items-center justify-center w-12 h-12 rounded-lg transition-all hover:bg-red-50 mb-4"
         title="Déconnexion"
       >
-        <span className="text-2xl transition-all group-hover:scale-110">🚪</span>
+        <span className="text-2xl transition-all group-hover:scale-110">
+          <LogOut className="w-6 h-6" />
+        </span>
 
         {/* Tooltip */}
         <div className="absolute left-full ml-4 px-3 py-2 bg-slate-900 text-white text-sm font-semibold rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">

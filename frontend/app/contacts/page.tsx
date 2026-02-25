@@ -3,9 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import ContactList from '../../components/ContactList';
-import TopNavigation from '../../components/TopNavigation';
 
 type CurrentUser = {
   id: string;
@@ -16,6 +14,7 @@ export default function ContactsPage() {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'my' | 'all'>('my');
 
   const supabase = useMemo(
     () =>
@@ -54,6 +53,16 @@ export default function ContactsPage() {
     void init();
   }, [router, supabase]);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab');
+    if (tab === 'all') {
+      setActiveTab('all');
+      return;
+    }
+    setActiveTab('my');
+  }, []);
+
   if (loading) {
     return <div className="p-10 text-center text-slate-500">Chargement des contacts...</div>;
   }
@@ -66,21 +75,37 @@ export default function ContactsPage() {
     );
   }
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    localStorage.clear();
-    window.location.href = '/login';
-  };
-
   return (
     <div className="min-h-screen bg-slate-100">
       <header className="bg-white border-b-2 border-slate-200 p-4 sticky top-0 z-30 shadow-sm">
-        <div className="max-w-7xl mx-auto">
-          <h1 className="text-2xl font-black text-blue-700 italic tracking-tighter">Tous les Contacts</h1>
+        <div className="max-w-7xl mx-auto space-y-4">
+          <h1 className="text-2xl font-black text-blue-700 italic tracking-tighter">Contacts</h1>
+          <div className="flex gap-3 border-b border-slate-200 overflow-x-auto">
+            <button
+              onClick={() => setActiveTab('my')}
+              className={`px-4 py-2 text-sm font-black uppercase transition border-b-2 whitespace-nowrap ${
+                activeTab === 'my'
+                  ? 'border-blue-600 text-blue-700'
+                  : 'border-transparent text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Mes contacts
+            </button>
+            <button
+              onClick={() => setActiveTab('all')}
+              className={`px-4 py-2 text-sm font-black uppercase transition border-b-2 whitespace-nowrap ${
+                activeTab === 'all'
+                  ? 'border-blue-600 text-blue-700'
+                  : 'border-transparent text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Contacts
+            </button>
+          </div>
         </div>
       </header>
       <div className="max-w-7xl mx-auto">
-        <ContactList currentUser={currentUser} mode="all" />
+        <ContactList currentUser={currentUser} mode={activeTab} />
       </div>
     </div>
   );

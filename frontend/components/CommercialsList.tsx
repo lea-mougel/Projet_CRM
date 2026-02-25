@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
+import { ArrowUpDown, Search, CircleDollarSign, BarChart3, CheckCircle2, Sparkles, Settings2, ScanSearch, X } from 'lucide-react';
 import { Lead } from '../api/contacts.api';
 
 interface Commercial {
@@ -91,7 +92,7 @@ export default function CommercialsList({ commercials, leads }: CommercialsListP
   };
 
   const SortIcon = ({ field }: { field: SortField }) => {
-    if (sortField !== field) return <span className="text-slate-300 text-xs">↕️</span>;
+    if (sortField !== field) return <ArrowUpDown className="w-3 h-3 text-slate-300" />;
     return <span className="text-blue-600">{sortOrder === 'asc' ? '↑' : '↓'}</span>;
   };
 
@@ -105,19 +106,20 @@ export default function CommercialsList({ commercials, leads }: CommercialsListP
 
       {/* Barre de recherche */}
       <div className="relative">
+        <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
         <input
           type="text"
-          placeholder="🔍 Rechercher un commercial par email..."
+          placeholder="Rechercher un commercial par email..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         />
         {searchTerm && (
           <button
             onClick={() => setSearchTerm('')}
             className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
           >
-            ✕
+            <X className="w-4 h-4" />
           </button>
         )}
       </div>
@@ -142,7 +144,7 @@ export default function CommercialsList({ commercials, leads }: CommercialsListP
                     onClick={() => handleSort('montantAttente')}
                     className="flex items-center justify-center gap-2 hover:text-blue-600 transition w-full"
                   >
-                    💰 Montant attente <SortIcon field="montantAttente" />
+                    <CircleDollarSign className="w-4 h-4" />Montant attente <SortIcon field="montantAttente" />
                   </button>
                 </th>
                 <th className="text-center py-4 px-6 font-bold text-slate-700">
@@ -150,7 +152,7 @@ export default function CommercialsList({ commercials, leads }: CommercialsListP
                     onClick={() => handleSort('conversion')}
                     className="flex items-center justify-center gap-2 hover:text-blue-600 transition w-full"
                   >
-                    📊 % Conversion <SortIcon field="conversion" />
+                    <BarChart3 className="w-4 h-4" />% Conversion <SortIcon field="conversion" />
                   </button>
                 </th>
                 <th className="text-center py-4 px-6 font-bold text-slate-700">
@@ -158,7 +160,7 @@ export default function CommercialsList({ commercials, leads }: CommercialsListP
                     onClick={() => handleSort('montantGagne')}
                     className="flex items-center justify-center gap-2 hover:text-blue-600 transition w-full"
                   >
-                    ✅ Montant gagné <SortIcon field="montantGagne" />
+                    <CheckCircle2 className="w-4 h-4" />Montant gagné <SortIcon field="montantGagne" />
                   </button>
                 </th>
                 <th className="text-center py-4 px-6 font-bold text-slate-700">Action</th>
@@ -186,13 +188,13 @@ export default function CommercialsList({ commercials, leads }: CommercialsListP
                   <td className="py-4 px-6 text-center">
                     <div className="flex gap-2 justify-center text-xs font-semibold">
                       <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded">
-                        🆕 {commercial.leadCount.nouveau}
+                        <span className="inline-flex items-center gap-1"><Sparkles className="w-3 h-3" />{commercial.leadCount.nouveau}</span>
                       </span>
                       <span className="bg-yellow-100 text-yellow-700 px-2 py-1 rounded">
-                        ⚙️ {commercial.leadCount.enCours}
+                        <span className="inline-flex items-center gap-1"><Settings2 className="w-3 h-3" />{commercial.leadCount.enCours}</span>
                       </span>
                       <span className="bg-green-100 text-green-700 px-2 py-1 rounded">
-                        ✅ {commercial.leadCount.converti}
+                        <span className="inline-flex items-center gap-1"><CheckCircle2 className="w-3 h-3" />{commercial.leadCount.converti}</span>
                       </span>
                     </div>
                   </td>
@@ -229,7 +231,7 @@ export default function CommercialsList({ commercials, leads }: CommercialsListP
         </div>
       ) : (
         <div className="text-center py-12">
-          <div className="text-6xl mb-4">🔍</div>
+          <div className="flex justify-center mb-4"><ScanSearch className="w-12 h-12 text-slate-400" /></div>
           <p className="text-slate-600 font-semibold">Aucun commercial trouvé</p>
           <p className="text-slate-500 text-sm">Essayez de modifier votre recherche</p>
         </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { ClipboardList, UserRound, Users, LineChart, Lightbulb, Sparkles, Settings2, CheckCircle2, XCircle } from 'lucide-react';
 import { Lead, Contact } from '../api/contacts.api';
 import CombinedPipeline from './CombinedPipeline';
 import PipelineInsights from './PipelineInsights';
@@ -46,7 +47,7 @@ export default function CommercialAnalysis({
         {!isCommercialLocked && (
           <>
             <label className="block text-sm font-semibold text-slate-700 mb-3">
-              📋 Sélectionner un commercial
+              <span className="inline-flex items-center gap-2"><ClipboardList className="w-4 h-4" />Sélectionner un commercial</span>
             </label>
             <select
               value={selectedCommercialId}
@@ -64,7 +65,7 @@ export default function CommercialAnalysis({
 
         {isCommercialLocked && selectedCommercial && (
           <div className="mb-3">
-            <p className="text-sm font-semibold text-slate-700">👤 Commercial sélectionné</p>
+            <p className="text-sm font-semibold text-slate-700 inline-flex items-center gap-2"><UserRound className="w-4 h-4" />Commercial sélectionné</p>
             <p className="text-slate-900 font-semibold">{selectedCommercial.email}</p>
           </div>
         )}
@@ -97,7 +98,7 @@ export default function CommercialAnalysis({
               : 'border-transparent text-slate-600 hover:text-slate-900'
           }`}
         >
-          👥 Contacts ({commercialContacts.length})
+          <span className="inline-flex items-center gap-2"><Users className="w-4 h-4" />Contacts ({commercialContacts.length})</span>
         </button>
         <button
           onClick={() => setActiveTab('pipeline')}
@@ -107,7 +108,7 @@ export default function CommercialAnalysis({
               : 'border-transparent text-slate-600 hover:text-slate-900'
           }`}
         >
-          📈 Pipeline
+          <span className="inline-flex items-center gap-2"><LineChart className="w-4 h-4" />Pipeline</span>
         </button>
         <button
           onClick={() => setActiveTab('insights')}
@@ -117,7 +118,7 @@ export default function CommercialAnalysis({
               : 'border-transparent text-slate-600 hover:text-slate-900'
           }`}
         >
-          💡 Insights
+          <span className="inline-flex items-center gap-2"><Lightbulb className="w-4 h-4" />Insights</span>
         </button>
         <button
           onClick={() => setActiveTab('leads')}
@@ -127,7 +128,7 @@ export default function CommercialAnalysis({
               : 'border-transparent text-slate-600 hover:text-slate-900'
           }`}
         >
-          📋 Détails des leads ({commercialLeads.length})
+          <span className="inline-flex items-center gap-2"><ClipboardList className="w-4 h-4" />Détails des leads ({commercialLeads.length})</span>
         </button>
       </div>
 
@@ -191,10 +192,10 @@ function LeadsDetailsTab({ leads }: { leads: Lead[] }) {
   }
 
   const statuses = [
-    { id: 'nouveau', label: 'Nouveau', icon: '🆕', color: '#3b82f6' },
-    { id: 'en cours', label: 'En Cours', icon: '⚙️', color: '#eab308' },
-    { id: 'converti', label: 'Converti', icon: '✅', color: '#22c55e' },
-    { id: 'perdu', label: 'Perdu', icon: '❌', color: '#ef4444' },
+    { id: 'nouveau', label: 'Nouveau', icon: Sparkles, color: '#3b82f6' },
+    { id: 'en cours', label: 'En Cours', icon: Settings2, color: '#eab308' },
+    { id: 'converti', label: 'Converti', icon: CheckCircle2, color: '#22c55e' },
+    { id: 'perdu', label: 'Perdu', icon: XCircle, color: '#ef4444' },
   ];
 
   const getStatusInfo = (status: string) => {
@@ -217,11 +218,12 @@ function LeadsDetailsTab({ leads }: { leads: Lead[] }) {
           <tbody>
             {leads.map((lead) => {
               const statusInfo = getStatusInfo(lead.status);
+              const StatusIcon = statusInfo.icon;
               return (
                 <tr key={lead.id} className="border-b border-slate-100 hover:bg-slate-50">
                   <td className="py-3 px-4">
                     <div className="flex items-center gap-2">
-                      <span>{statusInfo.icon}</span>
+                      <StatusIcon className="w-4 h-4" style={{ color: statusInfo.color }} />
                       <span className="font-semibold text-slate-900">{statusInfo.label}</span>
                     </div>
                   </td>

@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
+import { UserRound } from 'lucide-react';
 
 interface Lead {
   id: string;
@@ -91,7 +92,7 @@ export default function Pipeline() {
                     <p className="text-xs text-slate-500 mb-2">{lead.contacts?.first_name} {lead.contacts?.last_name}</p>
                     <div className="flex justify-between items-center">
                       <span className="text-blue-700 font-black text-sm">{lead.amount} €</span>
-                      <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-[10px]">👤</div>
+                      <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-[10px]"><UserRound className="w-3.5 h-3.5 text-slate-600" /></div>
                     </div>
                   </button>
                 ))}

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
+import { BarChart3, UserRound, LineChart, Lightbulb } from 'lucide-react';
 import { contactsApi, Lead } from '../../api/contacts.api';
 import CombinedPipeline from '../../components/CombinedPipeline';
 import PipelineInsights from '../../components/PipelineInsights';
@@ -144,7 +145,7 @@ export default function PipelinePage() {
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center text-white font-bold">
-              📊
+              <BarChart3 className="w-5 h-5" />
             </div>
             <h1 className="text-2xl font-bold text-slate-900">Pipeline de Vente</h1>
           </div>
@@ -171,7 +172,7 @@ export default function PipelinePage() {
                   : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
               }`}
             >
-              👤 Ma Pipeline
+              <span className="inline-flex items-center gap-2"><UserRound className="w-4 h-4" />Ma Pipeline</span>
             </button>
             <button
               onClick={() => setShowMyPipeline(false)}
@@ -181,7 +182,7 @@ export default function PipelinePage() {
                   : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
               }`}
             >
-              📊 Pipeline Globale
+              <span className="inline-flex items-center gap-2"><BarChart3 className="w-4 h-4" />Pipeline Globale</span>
             </button>
           </div>
         )}
@@ -196,7 +197,7 @@ export default function PipelinePage() {
                 : 'border-transparent text-slate-600 hover:text-slate-900'
             }`}
           >
-            📈 Pipeline
+            <span className="inline-flex items-center gap-2"><LineChart className="w-4 h-4" />Pipeline</span>
           </button>
           <button
             onClick={() => setActiveTab('insights')}
@@ -206,7 +207,11 @@ export default function PipelinePage() {
                 : 'border-transparent text-slate-600 hover:text-slate-900'
             }`}
           >
-            {currentUser?.role === 'admin' ? '📊 Analyse des leads' : '💡 Insights'}
+            {currentUser?.role === 'admin' ? (
+              <span className="inline-flex items-center gap-2"><BarChart3 className="w-4 h-4" />Analyse des leads</span>
+            ) : (
+              <span className="inline-flex items-center gap-2"><Lightbulb className="w-4 h-4" />Insights</span>
+            )}
           </button>
         </div>
 
