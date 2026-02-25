@@ -343,4 +343,14 @@ export const contactsApi = {
 
     return parseResponse<{ success: boolean }>(response);
   },
+
+  async getUserProfile(userId: string): Promise<{ role: string }> {
+    const { data } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', userId)
+      .single();
+    
+    return data || { role: 'user' };
+  },
 };

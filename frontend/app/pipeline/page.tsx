@@ -4,13 +4,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
 import { contactsApi, Lead } from '../../api/contacts.api';
-import PipelineKanban from '../../components/PipelineKanban';
-import PipelineFunnel from '../../components/PipelineFunnel';
+import CombinedPipeline from '../../components/CombinedPipeline';
 import PipelineInsights from '../../components/PipelineInsights';
 
 type CurrentUser = {
   id: string;
   role: string;
+  email: string;
 };
 
 type Company = {
@@ -24,6 +24,16 @@ type Contact = {
   last_name: string;
   email: string;
   company_id?: string | null;
+  assigned_to?: string | null;
+  company?: {
+    id?: string;
+    name?: string | null;
+    industry?: string | null;
+    website?: string | null;
+    address?: string | null;
+    town?: string | null;
+  } | null;
+  phone?: string | null;
 };
 
 export default function PipelinePage() {
@@ -33,7 +43,8 @@ export default function PipelinePage() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
-  const [activeTab, setActiveTab] = useState<'kanban' | 'funnel' | 'insights'>('kanban');
+  const [showMyPipeline, setShowMyPipeline] = useState(false);
+  const [activeTab, setActiveTab] = useState<'pipeline' | 'insights'>('pipeline');
 
   const supabase = useMemo(
     () =>
@@ -82,10 +93,11 @@ export default function PipelinePage() {
       }
 
       const userId = data.session.user.id;
+      const userEmail = data.session.user.email || '';
       try {
         const profile = await contactsApi.getUserProfile(userId);
         if (profile) {
-          setCurrentUser({ id: userId, role: profile.role || 'user' });
+          setCurrentUser({ id: userId, role: profile.role || 'user', email: userEmail });
         }
       } catch (err) {
         console.error('Erreur profil:', err);
@@ -111,6 +123,16 @@ export default function PipelinePage() {
     window.location.href = '/login';
   };
 
+  // Filtrer les leads selon le contexte
+  const filteredLeads = useMemo(() => {
+    if (!currentUser) return leads;
+    if (currentUser.role === 'admin') {
+      return showMyPipeline ? leads.filter((l) => l.assigned_to === currentUser.id) : leads;
+    }
+    // Pour les commerciaux, toujours afficher leur pipeline
+    return leads.filter((l) => l.assigned_to === currentUser.id);
+  }, [leads, currentUser, showMyPipeline]);
+
   if (loading) {
     return <div className="p-10 text-center text-slate-500">Chargement...</div>;
   }
@@ -135,51 +157,69 @@ export default function PipelinePage() {
         </div>
       </header>
 
-      {/* Onglets */}
+      {/* Contenu */}
       <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="flex gap-4 mb-8 border-b border-slate-200">
+        {/* Switch Ma Pipeline / Pipeline Globale (pour commerciaux) */}
+        {currentUser?.role === 'commercial' && (
+          <div className="mb-6 flex items-center gap-4 bg-white rounded-lg p-4 shadow-sm">
+            <span className="font-semibold text-slate-700">Vue:</span>
+            <button
+              onClick={() => setShowMyPipeline(true)}
+              className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                showMyPipeline
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+              }`}
+            >
+              👤 Ma Pipeline
+            </button>
+            <button
+              onClick={() => setShowMyPipeline(false)}
+              className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                !showMyPipeline
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+              }`}
+            >
+              📊 Pipeline Globale
+            </button>
+          </div>
+        )}
+
+        {/* Onglets */}
+        <div className="flex gap-4 mb-8 border-b border-slate-200 overflow-x-auto">
           <button
-            onClick={() => setActiveTab('kanban')}
-            className={`px-6 py-3 font-semibold transition-all border-b-2 ${
-              activeTab === 'kanban'
+            onClick={() => setActiveTab('pipeline')}
+            className={`px-6 py-3 font-semibold transition-all border-b-2 whitespace-nowrap ${
+              activeTab === 'pipeline'
                 ? 'border-blue-600 text-blue-600'
                 : 'border-transparent text-slate-600 hover:text-slate-900'
             }`}
           >
-            📋 Kanban
-          </button>
-          <button
-            onClick={() => setActiveTab('funnel')}
-            className={`px-6 py-3 font-semibold transition-all border-b-2 ${
-              activeTab === 'funnel'
-                ? 'border-green-600 text-green-600'
-                : 'border-transparent text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            📈 Funnel
+            📈 Pipeline
           </button>
           <button
             onClick={() => setActiveTab('insights')}
-            className={`px-6 py-3 font-semibold transition-all border-b-2 ${
+            className={`px-6 py-3 font-semibold transition-all border-b-2 whitespace-nowrap ${
               activeTab === 'insights'
                 ? 'border-purple-600 text-purple-600'
                 : 'border-transparent text-slate-600 hover:text-slate-900'
             }`}
           >
-            💡 Insights
+            {currentUser?.role === 'admin' ? '📊 Analyse des leads' : '💡 Insights'}
           </button>
         </div>
 
         {/* Contenu des onglets */}
         <div className="bg-white rounded-2xl shadow-lg p-8">
-          {activeTab === 'kanban' && (
-            <PipelineKanban leads={leads} loadLeads={loadLeads} />
+          {activeTab === 'pipeline' && (
+            <CombinedPipeline leads={filteredLeads} />
           )}
-          {activeTab === 'funnel' && (
-            <PipelineFunnel leads={leads} />
+          {activeTab === 'insights' && currentUser?.role === 'commercial' && (
+            <PipelineInsights leads={filteredLeads} userRole="commercial" />
           )}
-          {activeTab === 'insights' && (
-            <PipelineInsights leads={leads} />
+          {activeTab === 'insights' && currentUser?.role === 'admin' && (
+            <PipelineInsights leads={leads} userRole="admin" />
           )}
         </div>
       </div>

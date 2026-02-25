@@ -2,8 +2,9 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
+import { contactsApi } from '../api/contacts.api';
 
 type NavItem = {
   href: string;
@@ -12,17 +13,25 @@ type NavItem = {
   key: string;
 };
 
-const navItems: NavItem[] = [
+const baseNavItems: NavItem[] = [
   { href: '/', icon: '🏠', label: 'Accueil', key: 'home' },
   { href: '/my-contacts', icon: '👤', label: 'Mes contacts', key: 'my-contacts' },
   { href: '/contacts', icon: '👥', label: 'Contacts', key: 'contacts' },
   { href: '/companies', icon: '🏢', label: 'Entreprises', key: 'companies' },
   { href: '/leads', icon: '📊', label: 'Leads', key: 'leads' },
+  { href: '/pipeline', icon: '📈', label: 'Pipeline', key: 'pipeline' },
+];
+
+const adminNavItems: NavItem[] = [
+  { href: '/commercials', icon: '🎯', label: 'Commerciaux', key: 'commercials' },
 ];
 
 export default function SideNavigation() {
   const pathname = usePathname();
   const router = useRouter();
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [loading, setLoading] = useState(true);
+
   const supabase = useMemo(
     () =>
       createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
@@ -34,6 +43,39 @@ export default function SideNavigation() {
       }),
     [],
   );
+
+  useEffect(() => {
+    const checkRole = async () => {
+      const { data, error } = await supabase.auth.getSession();
+      if (error || !data?.session) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const profile = await contactsApi.getUserProfile(data.session.user.id);
+        if (profile && profile.role === 'admin') {
+          setIsAdmin(true);
+        }
+      } catch (err) {
+        console.error('Erreur profil:', err);
+      }
+
+      setLoading(false);
+    };
+
+    checkRole();
+  }, [supabase.auth]);
+
+  const navItems = useMemo(() => {
+    let items = [...baseNavItems];
+    // Masquer /leads pour les admins
+    if (isAdmin) {
+      items = items.filter((item) => item.key !== 'leads');
+      items.push(...adminNavItems);
+    }
+    return items;
+  }, [isAdmin]);
 
   const handleLogout = useCallback(async () => {
     await supabase.auth.signOut();
