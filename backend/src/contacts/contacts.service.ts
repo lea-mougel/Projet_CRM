@@ -89,9 +89,18 @@ export class ContactsService {
 
     if (contactsError) throw new Error(contactsError.message);
 
+    // Fetch leads associated with the company
+    const { data: leads, error: leadsError } = await client
+      .from('leads')
+      .select('id, title, status, estimated_value')
+      .eq('company_id', companyId);
+
+    if (leadsError) throw new Error(leadsError.message);
+
     return {
       ...company,
       contacts: contacts || [],
+      leads: leads || [],
     };
   }
 
@@ -123,6 +132,27 @@ export class ContactsService {
 
     if (error) throw new Error(error.message);
     return data;
+  }
+
+  async updateCompany(id: string, companyData: any) {
+    const client = this.supabaseService.getClient();
+    const { data, error } = await client
+      .from('companies')
+      .update(companyData)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+    return data;
+  }
+
+  async deleteCompany(id: string) {
+    const client = this.supabaseService.getClient();
+    const { error } = await client.from('companies').delete().eq('id', id);
+
+    if (error) throw new Error(error.message);
+    return { success: true };
   }
 
   async create(contactData: any) {

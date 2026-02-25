@@ -45,6 +45,12 @@ export type CompanyDetails = {
       email?: string | null;
     } | null;
   }>;
+  leads?: Array<{
+    id: string;
+    title: string;
+    status: string;
+    estimated_value: number;
+  }>;
 };
 
 export type CompanyListItem = {
@@ -132,7 +138,7 @@ export const contactsApi = {
     return parseResponse<Contact>(response);
   },
 
-  async update(id: string, payload: ContactPayload): Promise<Contact> {
+  async update(id: string, payload: Partial<ContactPayload>): Promise<Contact> {
     const headers = await getAuthHeaders();
     const response = await fetch(`${API_BASE_URL}/contacts/${id}`, {
       method: 'PATCH',
@@ -189,13 +195,35 @@ export const contactsApi = {
   },
 
   async createCompany(payload: CompanyPayload): Promise<CompanyListItem> {
+    const headers = await getAuthHeaders();
     const response = await fetch(`${API_BASE_URL}/companies`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify(payload),
     });
 
     return parseResponse<CompanyListItem>(response);
+  },
+
+  async updateCompany(id: string, payload: CompanyPayload): Promise<CompanyListItem> {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/companies/${id}`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify(payload),
+    });
+
+    return parseResponse<CompanyListItem>(response);
+  },
+
+  async deleteCompany(id: string): Promise<{ success: boolean }> {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/companies/${id}`, {
+      method: 'DELETE',
+      headers,
+    });
+
+    return parseResponse<{ success: boolean }>(response);
   },
 
   async getContactNotes(contactId: string): Promise<ContactNote[]> {
@@ -215,5 +243,15 @@ export const contactsApi = {
     });
 
     return parseResponse<ContactNote>(response);
+  },
+
+  async getUnassignedContacts(): Promise<Contact[]> {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/contacts?company_id=null`, {
+      method: 'GET',
+      headers,
+    });
+
+    return parseResponse<Contact[]>(response);
   },
 };
