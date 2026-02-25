@@ -1,19 +1,27 @@
-import { Module } from '@nestjs/common';
+import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { SupabaseService } from './supabase/supabase.service';
-import { ContactsController } from './contacts/contacts.controller';
 import { ContactsModule } from './contacts/contacts.module';
 import { ConfigModule } from '@nestjs/config';
 import { LeadsModule } from './leads/leads.module';
+import { CompaniesModule } from './companies/companies.module';
+import { AuthMiddleware } from './auth/auth.middleware';
+import { SupabaseModule } from './supabase/supabase.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    SupabaseModule,
     ContactsModule,
-    LeadsModule],
+    LeadsModule,
+    CompaniesModule,
+  ],
 
-  controllers: [AppController, ContactsController],
-  providers: [AppService, SupabaseService],
+  controllers: [AppController],
+  providers: [AppService],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(AuthMiddleware).forRoutes('*');
+  }
+}

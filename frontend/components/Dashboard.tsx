@@ -2,17 +2,46 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { createClient } from '@supabase/supabase-js';
 
-export default function Dashboard({ session }: { session: any }) {
+type DashboardSession = {
+  user: {
+    id: string;
+  };
+};
+
+type ContactRecord = {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  assigned_to: string | null;
+  assigned_commercial?: {
+    email?: string;
+  };
+};
+
+type LeadRecord = {
+  id: string;
+  status: string;
+  estimated_value: number | string;
+};
+
+type ProfileRecord = {
+  id: string;
+  email: string;
+  role: string;
+};
+
+export default function Dashboard({ session }: { session: DashboardSession }) {
   const supabase = useMemo(() => createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { auth: { persistSession: true, storageKey: 'crm-auth-token', lockDuration: 0 } }
+    { auth: { persistSession: true, storageKey: 'crm-auth-token' } }
   ), []);
 
   const [role, setRole] = useState<string>('chargement');
-  const [contacts, setContacts] = useState<any[]>([]);
-  const [leads, setLeads] = useState<any[]>([]);
-  const [allProfiles, setAllProfiles] = useState<any[]>([]);
+  const [contacts, setContacts] = useState<ContactRecord[]>([]);
+  const [leads, setLeads] = useState<LeadRecord[]>([]);
+  const [allProfiles, setAllProfiles] = useState<ProfileRecord[]>([]);
   const [showRoleManager, setShowRoleManager] = useState(false);
   const [loading, setLoading] = useState(true);
   const [adminMessage, setAdminMessage] = useState<string | null>(null);
@@ -35,9 +64,10 @@ export default function Dashboard({ session }: { session: any }) {
         
         // 2. Charger les données si Admin ou Commercial
         if (profile.role === 'admin' || profile.role === 'commercial') {
+          const headers = { 'X-User-Id': session.user.id };
           const [resC, resL] = await Promise.all([
-            fetch('http://localhost:3000/contacts'),
-            fetch('http://localhost:3000/leads')
+            fetch('http://localhost:3000/contacts', { headers }),
+            fetch('http://localhost:3000/leads', { headers })
           ]);
           if (resC.ok) setContacts(await resC.json());
           if (resL.ok) setLeads(await resL.json());
@@ -95,22 +125,20 @@ export default function Dashboard({ session }: { session: any }) {
 
   const totalValue = leads.reduce((acc, curr) => acc + (Number(curr.estimated_value) || 0), 0);
   const commercialsOnly = allProfiles.filter(p => p.role === 'commercial' || p.role === 'admin');
+  const visibleContacts = role === 'commercial'
+    ? contacts.filter((contact) => !contact.assigned_to || contact.assigned_to === session.user.id)
+    : contacts;
+  const previewContacts = visibleContacts.slice(0, 3);
 
   if (loading) return <div className="p-20 text-center font-black text-blue-600 animate-pulse">VÉRIFICATION DES ACCÈS...</div>;
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900 pb-12 font-sans">
-      <nav className="bg-white border-b-2 border-slate-200 p-4 sticky top-0 z-30 flex justify-between items-center shadow-sm">
-        <div className="flex items-center gap-4 cursor-pointer" onClick={() => setShowRoleManager(false)}>
-          <h1 className="text-2xl font-black text-blue-700 italic tracking-tighter">CRM PRO</h1>
-          <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${
-            role === 'admin' ? 'bg-purple-600 text-white' : role === 'commercial' ? 'bg-blue-600 text-white' : 'bg-slate-300 text-slate-600'
-          }`}>
-            {role}
-          </span>
+      <header className="bg-white border-b-2 border-slate-200 p-4 sticky top-0 z-30 shadow-sm">
+        <div className="max-w-7xl mx-auto">
+          <h1 className="text-2xl font-black text-blue-700 italic tracking-tighter">CRM PRO - Accueil</h1>
         </div>
-        <button onClick={handleLogout} className="bg-red-500 text-white px-5 py-2 rounded-xl font-bold text-sm shadow-lg hover:bg-red-600 transition">DÉCONNEXION</button>
-      </nav>
+      </header>
 
       <main className="p-6 max-w-7xl mx-auto space-y-8">
         {showRoleManager && role === 'admin' ? (
@@ -148,9 +176,21 @@ export default function Dashboard({ session }: { session: any }) {
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                   <section className="lg:col-span-5 bg-white rounded-[2.5rem] shadow-sm border border-slate-200 p-8 h-fit">
-                    <h2 className="text-xl font-black mb-8 text-slate-800 uppercase italic">Répertoire ({contacts.length})</h2>
+                    <div className="flex flex-wrap items-center justify-between mb-4 gap-3">
+                      <h2 className="text-xl font-black text-slate-800 uppercase italic">Répertoire ({visibleContacts.length})</h2>
+                    </div>
+                    <div className="mb-8">
+                      <button
+                        onClick={() => {
+                          window.location.href = '/contacts';
+                        }}
+                        className="px-3 py-2 rounded-xl bg-blue-600 text-white text-[10px] font-black uppercase hover:bg-blue-700"
+                      >
+                        Plus de contacts
+                      </button>
+                    </div>
                     <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
-                      {contacts.map(c => (
+                      {previewContacts.map(c => (
                         <div key={c.id} className="p-5 bg-slate-50 rounded-[1.5rem] border border-slate-100 hover:border-blue-400 transition-all">
                           <div className="mb-4">
                             <p className="font-black text-slate-900">{c.first_name} {c.last_name}</p>
@@ -177,6 +217,9 @@ export default function Dashboard({ session }: { session: any }) {
                           </div>
                         </div>
                       ))}
+                      {previewContacts.length === 0 && (
+                        <p className="text-sm text-slate-500 italic">Aucun contact visible pour votre profil.</p>
+                      )}
                     </div>
                   </section>
 
