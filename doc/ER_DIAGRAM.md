@@ -1,37 +1,32 @@
-# Diagramme ER - Entity Relationship Diagram
-
-## Visualisation Complète
+# ER Diagram - Version alignée au périmètre implémenté
 
 ```mermaid
 erDiagram
-    AUTH-USERS ||--o{ PROFILES : "1:N"
-    AUTH-USERS ||--o{ CONTACTS : "creates"
-    AUTH-USERS ||--o{ TASKS : "owns"
-    
+    AUTH_USERS ||--|| PROFILES : "has_profile"
+    AUTH_USERS ||--o{ CONTACTS : "creates"
+
     PROFILES ||--o{ CONTACTS : "assigned_to"
     PROFILES ||--o{ LEADS : "assigned_to"
-    PROFILES ||--o{ CONTACT-NOTES : "author"
-    
+    PROFILES ||--o{ CONTACT_NOTES : "author"
+
     COMPANIES ||--o{ CONTACTS : "contains"
-    COMPANIES ||--o{ LEADS : "target"
-    
-    CONTACTS ||--o{ LEADS : "generates"
-    CONTACTS ||--o{ CONTACT-NOTES : "documented_by"
-    CONTACTS ||--o{ TASKS : "linked_to"
-    
-    AUTH-USERS {
+    COMPANIES ||--o{ LEADS : "targets"
+
+    CONTACTS ||--o{ LEADS : "originates"
+    CONTACTS ||--o{ CONTACT_NOTES : "history"
+
+    AUTH_USERS {
         uuid id PK
         string email UK
-        string password_hash
         timestamp created_at
     }
-    
+
     PROFILES {
-        uuid id PK "FK to auth.users"
-        enum role "admin|commercial|user"
+        uuid id PK "FK auth_users.id"
         string email
+        string role "admin|commercial|user"
     }
-    
+
     COMPANIES {
         uuid id PK
         string name
@@ -40,8 +35,9 @@ erDiagram
         string address
         string town
         timestamp created_at
+        timestamp updated_at
     }
-    
+
     CONTACTS {
         uuid id PK
         string first_name
@@ -49,18 +45,18 @@ erDiagram
         string email UK
         string phone
         uuid company_id FK
-        uuid user_id FK
         uuid assigned_to FK
+        uuid user_id FK
         timestamp created_at
         timestamp updated_at
     }
-    
+
     LEADS {
         uuid id PK
         string title
         uuid contact_id FK
         uuid company_id FK
-        enum status "nouveau|en_cours|gagné|perdu"
+        string status "nouveau|en cours|converti|perdu"
         string source
         string description
         numeric estimated_value
@@ -68,31 +64,19 @@ erDiagram
         timestamp created_at
         timestamp updated_at
     }
-    
-    CONTACT-NOTES {
+
+    CONTACT_NOTES {
         uuid id PK
         uuid contact_id FK
         uuid author_id FK
         string content
-        enum type "note|appel|email|réunion"
+        string type "note|appel|email|réunion"
         timestamp created_at
-    }
-    
-    TASKS {
-        uuid id PK
-        string title
-        timestamp due_date
-        boolean is_completed
-        uuid contact_id FK
-        uuid user_id FK
+        timestamp updated_at
     }
 ```
 
-## Légende
+## Notes
 
-- **PK** = Primary Key (Clé primaire)
-- **FK** = Foreign Key (Clé étrangère)
-- **UK** = Unique Key (Contrainte d'unicité)
-- **||--o{** = 1:N (One to Many)
-- **enum** = Énumération (valeurs prédéfinies)
-
+- Le statut lead utilise les valeurs réelles de l'application: nouveau, en cours, converti, perdu.
+- Les entités tasks/emailings sont volontairement exclues de ce diagramme car non implémentées dans la version actuelle.

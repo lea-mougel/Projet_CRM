@@ -18,6 +18,7 @@ export default function CommercialAnalysis({
   commercials,
   preSelectedCommercialId,
 }: CommercialAnalysisProps) {
+  const isCommercialLocked = Boolean(preSelectedCommercialId);
   const [selectedCommercialId, setSelectedCommercialId] = useState<string>(
     preSelectedCommercialId || commercials[0]?.id || ''
   );
@@ -42,20 +43,31 @@ export default function CommercialAnalysis({
     <div className="space-y-6">
       {/* Sélection du commercial */}
       <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6 border border-blue-200">
-        <label className="block text-sm font-semibold text-slate-700 mb-3">
-          📋 Sélectionner un commercial
-        </label>
-        <select
-          value={selectedCommercialId}
-          onChange={(e) => setSelectedCommercialId(e.target.value)}
-          className="w-full md:w-80 border-2 border-slate-300 rounded-lg p-3 font-semibold text-slate-900 focus:border-blue-500 outline-none"
-        >
-          {commercials.map((commercial) => (
-            <option key={commercial.id} value={commercial.id}>
-              {commercial.email}
-            </option>
-          ))}
-        </select>
+        {!isCommercialLocked && (
+          <>
+            <label className="block text-sm font-semibold text-slate-700 mb-3">
+              📋 Sélectionner un commercial
+            </label>
+            <select
+              value={selectedCommercialId}
+              onChange={(e) => setSelectedCommercialId(e.target.value)}
+              className="w-full md:w-80 border-2 border-slate-300 rounded-lg p-3 font-semibold text-slate-900 focus:border-blue-500 outline-none"
+            >
+              {commercials.map((commercial) => (
+                <option key={commercial.id} value={commercial.id}>
+                  {commercial.email}
+                </option>
+              ))}
+            </select>
+          </>
+        )}
+
+        {isCommercialLocked && selectedCommercial && (
+          <div className="mb-3">
+            <p className="text-sm font-semibold text-slate-700">👤 Commercial sélectionné</p>
+            <p className="text-slate-900 font-semibold">{selectedCommercial.email}</p>
+          </div>
+        )}
 
         {selectedCommercial && (
           <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
