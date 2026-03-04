@@ -155,6 +155,53 @@ export type TaskPayload = {
   lead_id?: string;
 };
 
+export type Communication = {
+  id: string;
+  recipient_email: string;
+  subject: string;
+  body?: string | null;
+  status: 'pending' | 'sent' | 'failed';
+  channel: 'email';
+  trigger_type: 'manual' | 'automation';
+  template_key?: string | null;
+  provider_message_id?: string | null;
+  error_message?: string | null;
+  created_at: string;
+  sent_at?: string | null;
+  contact?: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+  } | null;
+  lead?: {
+    id: string;
+    title: string;
+    status: 'nouveau' | 'en cours' | 'converti' | 'perdu';
+  } | null;
+};
+
+export type AutomationSettings = {
+  enabled: boolean;
+  subject: string;
+  body: string;
+  cooldown_hours: number;
+  daily_limit_per_recipient: number;
+  target: 'contact' | 'commercial';
+  target_commercial_id: string | null;
+  target_lead_id: string | null;
+};
+
+export type SendCommunicationPayload = {
+  recipient_email: string;
+  subject: string;
+  body?: string;
+  contact_id?: string;
+  lead_id?: string;
+  template_key?: string;
+  trigger_type?: 'manual' | 'automation';
+};
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
 async function getAuthHeaders(): Promise<Record<string, string>> {
@@ -422,5 +469,47 @@ export const contactsApi = {
     });
 
     return parseResponse<{ success: boolean }>(response);
+  },
+
+  async getCommunications(): Promise<Communication[]> {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/communications`, {
+      method: 'GET',
+      headers,
+    });
+
+    return parseResponse<Communication[]>(response);
+  },
+
+  async sendCommunication(payload: SendCommunicationPayload): Promise<Communication> {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/communications/send`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload),
+    });
+
+    return parseResponse<Communication>(response);
+  },
+
+  async getAutomationSettings(): Promise<AutomationSettings> {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/communications/automation-settings`, {
+      method: 'GET',
+      headers,
+    });
+
+    return parseResponse<AutomationSettings>(response);
+  },
+
+  async updateAutomationSettings(payload: Partial<AutomationSettings>): Promise<AutomationSettings> {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/communications/automation-settings`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify(payload),
+    });
+
+    return parseResponse<AutomationSettings>(response);
   },
 };

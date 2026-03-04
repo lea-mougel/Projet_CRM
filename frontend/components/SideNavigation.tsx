@@ -10,6 +10,7 @@ import {
   Building2,
   BarChart3,
   CheckSquare,
+  Mail,
   TrendingUp,
   Briefcase,
   LogOut,
@@ -18,7 +19,7 @@ import { contactsApi } from '../api/contacts.api';
 
 type NavItem = {
   href: string;
-  icon: 'home' | 'contacts' | 'companies' | 'leads' | 'tasks' | 'pipeline' | 'commercials';
+  icon: 'home' | 'contacts' | 'companies' | 'leads' | 'tasks' | 'communications' | 'pipeline' | 'commercials';
   label: string;
   key: string;
 };
@@ -29,6 +30,7 @@ const baseNavItems: NavItem[] = [
   { href: '/companies', icon: 'companies', label: 'Entreprises', key: 'companies' },
   { href: '/leads', icon: 'leads', label: 'Leads', key: 'leads' },
   { href: '/tasks', icon: 'tasks', label: 'Tâches', key: 'tasks' },
+  { href: '/communications', icon: 'communications', label: 'Comms', key: 'communications' },
   { href: '/pipeline', icon: 'pipeline', label: 'Pipeline', key: 'pipeline' },
 ];
 
@@ -94,8 +96,9 @@ export default function SideNavigation() {
   }, [supabase.auth]);
 
   const isActive = (href: string) => {
-    if (href === '/' && pathname === '/') return true;
-    if (href !== '/' && pathname.startsWith(href)) return true;
+    const cleanHref = href.split('?')[0];
+    if (cleanHref === '/' && pathname === '/') return true;
+    if (cleanHref !== '/' && pathname.startsWith(cleanHref)) return true;
     return false;
   };
 
@@ -113,6 +116,8 @@ export default function SideNavigation() {
         return <BarChart3 className={className} />;
       case 'tasks':
         return <CheckSquare className={className} />;
+      case 'communications':
+        return <Mail className={className} />;
       case 'pipeline':
         return <TrendingUp className={className} />;
       case 'commercials':

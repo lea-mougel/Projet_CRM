@@ -8,6 +8,7 @@ import { CompaniesModule } from './companies/companies.module';
 import { AuthMiddleware } from './auth/auth.middleware';
 import { SupabaseModule } from './supabase/supabase.module';
 import { TasksModule } from './tasks/tasks.module';
+import { CommunicationsModule } from './communications/communications.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { TasksModule } from './tasks/tasks.module';
     LeadsModule,
     CompaniesModule,
     TasksModule,
+    CommunicationsModule,
   ],
 
   controllers: [AppController],

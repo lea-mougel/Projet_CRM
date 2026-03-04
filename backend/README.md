@@ -8,6 +8,21 @@ Backend API du CRM construit avec NestJS + TypeScript, connecté à Supabase/Pos
 - npm
 - Variables d'environnement (Supabase + config API) selon votre `.env`
 
+### Variables d'environnement (Feature 7 - Brevo)
+
+Ajouter dans `.env`:
+
+```env
+BREVO_API_KEY=...
+BREVO_SENDER_EMAIL=...
+BREVO_SENDER_NAME=CRM
+```
+
+### SQL à exécuter (Feature 7)
+
+- Historique des communications: `backend/sql/feature7_step1_communications.sql`
+- Toggle admin des auto-envois: `backend/sql/feature7_step3_automation_settings.sql`
+
 ## Installation
 
 ```bash
@@ -51,6 +66,11 @@ npm run test:e2e
 - Contacts: CRUD + recherche
 - Leads: CRUD + mise à jour des statuts de pipeline
 - Profils utilisateurs: récupération du rôle pour pilotage frontend
+- Communications:
+	- `GET /communications`
+	- `POST /communications` (log manuel)
+	- `POST /communications/send` (envoi réel Brevo + log auto)
+	- `PATCH /communications/:id/status`
 
 ## Arborescence utile
 

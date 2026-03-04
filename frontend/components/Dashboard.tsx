@@ -104,11 +104,13 @@ export default function Dashboard({ session }: { session: DashboardSession }) {
 
         if (profile.role === 'admin' || profile.role === 'commercial') {
           const headers = { 'X-User-Id': session.user.id };
-          const [resC, resL, resT] = await Promise.all([
+          const requests: Promise<Response>[] = [
             fetch('http://localhost:3000/contacts', { headers }),
             fetch('http://localhost:3000/leads', { headers }),
             fetch('http://localhost:3000/tasks', { headers }),
-          ]);
+          ];
+
+          const [resC, resL, resT] = await Promise.all(requests);
           if (resC.ok) setContacts(await resC.json());
           if (resL.ok) setLeads(await resL.json());
           if (resT.ok) setTasks(await resT.json());
@@ -271,7 +273,17 @@ export default function Dashboard({ session }: { session: DashboardSession }) {
                   <section className="p-8 bg-gradient-to-br from-purple-900 to-indigo-800 rounded-[2.5rem] text-white shadow-xl relative overflow-hidden">
                     <h2 className="text-2xl font-black mb-4 uppercase italic tracking-tighter">Console Admin</h2>
                     {adminMessage && <div className="mb-4 p-2 bg-white/20 rounded-lg text-xs font-bold border border-white/30 italic inline-flex items-center gap-2"><Megaphone className="w-4 h-4" />{adminMessage}</div>}
-                    <button onClick={() => setShowRoleManager(true)} className="bg-white text-purple-900 px-7 py-3 rounded-2xl text-xs font-black uppercase shadow-2xl hover:scale-105 transition inline-flex items-center gap-2"><Settings className="w-4 h-4" />Gérer les membres</button>
+                    <div className="flex flex-wrap gap-3">
+                      <button onClick={() => setShowRoleManager(true)} className="bg-white text-purple-900 px-7 py-3 rounded-2xl text-xs font-black uppercase shadow-2xl hover:scale-105 transition inline-flex items-center gap-2"><Settings className="w-4 h-4" />Gérer les membres</button>
+                      <button
+                        onClick={() => {
+                          window.location.href = '/communications';
+                        }}
+                        className="bg-white/20 text-white px-5 py-3 rounded-2xl text-xs font-black uppercase border border-white/40 hover:bg-white/30 transition"
+                      >
+                        Ouvrir Comms
+                      </button>
+                    </div>
                   </section>
                 )}
 
