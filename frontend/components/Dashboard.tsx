@@ -2,6 +2,7 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { ShieldAlert, Megaphone, Settings, Pencil } from 'lucide-react';
+import { contactsApi } from '../api/contacts.api';
 
 type DashboardSession = {
   user: {
@@ -25,7 +26,15 @@ type LeadRecord = {
   title?: string;
   status: string;
   estimated_value: number | string;
+  created_at?: string;
   updated_at?: string;
+};
+
+type CommunicationRecord = {
+  id: string;
+  status: 'pending' | 'sent' | 'failed';
+  trigger_type: 'manual' | 'automation';
+  created_at?: string;
 };
 
 type TaskRecord = {
@@ -59,9 +68,11 @@ export default function Dashboard({ session }: { session: DashboardSession }) {
   const [contacts, setContacts] = useState<ContactRecord[]>([]);
   const [leads, setLeads] = useState<LeadRecord[]>([]);
   const [tasks, setTasks] = useState<TaskRecord[]>([]);
+  const [communications, setCommunications] = useState<CommunicationRecord[]>([]);
   const [allProfiles, setAllProfiles] = useState<ProfileRecord[]>([]);
   const [showRoleManager, setShowRoleManager] = useState(false);
   const [taskView, setTaskView] = useState<'today' | 'tomorrow' | 'week'>('today');
+  const [analyticsRange, setAnalyticsRange] = useState<'7d' | '30d' | 'month'>('month');
   const [hotLeadThreshold, setHotLeadThreshold] = useState<number>(10000);
   const [hotLeadThresholdDraft, setHotLeadThresholdDraft] = useState<string>('10000');
   const [isEditingHotLeadThreshold, setIsEditingHotLeadThreshold] = useState(false);
@@ -103,17 +114,17 @@ export default function Dashboard({ session }: { session: DashboardSession }) {
         setRole(profile.role);
 
         if (profile.role === 'admin' || profile.role === 'commercial') {
-          const headers = { 'X-User-Id': session.user.id };
-          const requests: Promise<Response>[] = [
-            fetch('http://localhost:3000/contacts', { headers }),
-            fetch('http://localhost:3000/leads', { headers }),
-            fetch('http://localhost:3000/tasks', { headers }),
-          ];
+          const [contactsList, leadsList, tasksList, communicationsList] = await Promise.all([
+            contactsApi.getAll('', profile.role === 'admin'),
+            contactsApi.getAllLeads(),
+            contactsApi.getAllTasks(),
+            contactsApi.getCommunications(),
+          ]);
 
-          const [resC, resL, resT] = await Promise.all(requests);
-          if (resC.ok) setContacts(await resC.json());
-          if (resL.ok) setLeads(await resL.json());
-          if (resT.ok) setTasks(await resT.json());
+          setContacts(contactsList as ContactRecord[]);
+          setLeads(leadsList as LeadRecord[]);
+          setTasks(tasksList as TaskRecord[]);
+          setCommunications(communicationsList as CommunicationRecord[]);
 
           const { data: pro } = await supabase.from('profiles').select('*').order('email');
           if (pro) setAllProfiles(pro);
@@ -232,6 +243,73 @@ export default function Dashboard({ session }: { session: DashboardSession }) {
     return { overdueTasks, dueSoonTasks };
   }, [tasks]);
 
+  const analytics = useMemo(() => {
+    const now = new Date();
+    const periodStart =
+      analyticsRange === 'month'
+        ? new Date(now.getFullYear(), now.getMonth(), 1)
+        : new Date(now.getTime() - (analyticsRange === '7d' ? 7 : 30) * 24 * 60 * 60 * 1000);
+
+    const totalLeads = leads.length;
+    const leadsNouveau = leads.filter((lead) => lead.status === 'nouveau').length;
+    const leadsEnCours = leads.filter((lead) => lead.status === 'en cours').length;
+    const leadsConvertis = leads.filter((lead) => lead.status === 'converti').length;
+    const leadsPerdus = leads.filter((lead) => lead.status === 'perdu').length;
+
+    const conversionRate = totalLeads === 0 ? 0 : Math.round((leadsConvertis / totalLeads) * 100);
+    const lostRate = totalLeads === 0 ? 0 : Math.round((leadsPerdus / totalLeads) * 100);
+
+    const leadsCreatedInPeriod = leads.filter((lead) => {
+      if (!lead.created_at) return false;
+      return new Date(lead.created_at) >= periodStart;
+    }).length;
+
+    const overdueTasksCount = tasks
+      .filter((task) => !task.is_completed && !!task.due_date)
+      .filter((task) => new Date(task.due_date as string) < now).length;
+
+    const commsInPeriod = communications.filter((communication) => {
+      if (!communication.created_at) return false;
+      return new Date(communication.created_at) >= periodStart;
+    });
+
+    const sentCount = commsInPeriod.filter((communication) => communication.status === 'sent').length;
+    const failedCount = commsInPeriod.filter((communication) => communication.status === 'failed').length;
+    const automationCount = commsInPeriod.filter((communication) => communication.trigger_type === 'automation').length;
+    const deliveryRate = commsInPeriod.length === 0 ? 0 : Math.round((sentCount / commsInPeriod.length) * 100);
+
+    const funnel = [
+      { key: 'nouveau', label: 'Nouveau', count: leadsNouveau },
+      { key: 'en-cours', label: 'En cours', count: leadsEnCours },
+      { key: 'converti', label: 'Converti', count: leadsConvertis },
+      { key: 'perdu', label: 'Perdu', count: leadsPerdus },
+    ];
+
+    const funnelMax = Math.max(...funnel.map((step) => step.count), 1);
+
+    return {
+      totalLeads,
+      leadsNouveau,
+      leadsEnCours,
+      leadsConvertis,
+      leadsPerdus,
+      conversionRate,
+      lostRate,
+      leadsCreatedInPeriod,
+      overdueTasksCount,
+      commsInPeriodCount: commsInPeriod.length,
+      sentCount,
+      failedCount,
+      automationCount,
+      deliveryRate,
+      funnel,
+      funnelMax,
+    };
+  }, [leads, tasks, communications, analyticsRange]);
+
+  const analyticsRangeLabel =
+    analyticsRange === '7d' ? '7 derniers jours' : analyticsRange === '30d' ? '30 derniers jours' : 'Mois en cours';
+
   if (loading)
     return <div className="p-20 text-center font-black text-blue-600 animate-pulse">VÉRIFICATION DES ACCÈS...</div>;
 
@@ -286,6 +364,92 @@ export default function Dashboard({ session }: { session: DashboardSession }) {
                     </div>
                   </section>
                 )}
+
+                <section className="bg-white rounded-[2rem] shadow-sm border border-slate-200 p-6">
+                  <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
+                    <h3 className="text-xl font-black text-slate-800 uppercase italic">Tableau de bord analytique</h3>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-black uppercase px-3 py-1 rounded-full bg-slate-100 text-slate-600">
+                        Vue {role === 'admin' ? 'globale' : 'commerciale'}
+                      </span>
+                      <select
+                        value={analyticsRange}
+                        onChange={(e) => setAnalyticsRange(e.target.value as '7d' | '30d' | 'month')}
+                        className="border border-slate-300 rounded-lg px-2 py-1 bg-white text-[11px] font-black uppercase"
+                      >
+                        <option value="7d">7j</option>
+                        <option value="30d">30j</option>
+                        <option value="month">Mois</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                      <p className="text-[10px] font-black uppercase text-slate-500">Leads totaux</p>
+                      <p className="mt-2 text-2xl font-black text-slate-900">{analytics.totalLeads}</p>
+                    </div>
+                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                      <p className="text-[10px] font-black uppercase text-emerald-700">Taux conversion</p>
+                      <p className="mt-2 text-2xl font-black text-emerald-800">{analytics.conversionRate}%</p>
+                    </div>
+                    <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
+                      <p className="text-[10px] font-black uppercase text-blue-700">CA pipeline</p>
+                      <p className="mt-2 text-2xl font-black text-blue-800">{totalValue.toLocaleString()} €</p>
+                    </div>
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                      <p className="text-[10px] font-black uppercase text-amber-700">Tâches en retard</p>
+                      <p className="mt-2 text-2xl font-black text-amber-800">{analytics.overdueTasksCount}</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                    <div className="rounded-xl border border-slate-200 p-4">
+                      <p className="text-[10px] font-black uppercase text-slate-500 mb-3">Funnel de conversion</p>
+                      <div className="space-y-3">
+                        {analytics.funnel.map((step) => {
+                          const width = Math.max(8, Math.round((step.count / analytics.funnelMax) * 100));
+                          return (
+                            <div key={step.key}>
+                              <div className="flex items-center justify-between text-xs font-bold text-slate-600 mb-1">
+                                <span>{step.label}</span>
+                                <span>{step.count}</span>
+                              </div>
+                              <div className="h-2 rounded-full bg-slate-200 overflow-hidden">
+                                <div className="h-2 rounded-full bg-blue-600" style={{ width: `${width}%` }} />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl border border-slate-200 p-4">
+                      <p className="text-[10px] font-black uppercase text-slate-500 mb-3">Performance communications ({analyticsRangeLabel})</p>
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div className="rounded-lg bg-slate-50 border border-slate-200 p-3">
+                          <p className="text-[10px] font-black uppercase text-slate-500">Envoyés</p>
+                          <p className="mt-1 text-xl font-black text-slate-900">{analytics.sentCount}</p>
+                        </div>
+                        <div className="rounded-lg bg-slate-50 border border-slate-200 p-3">
+                          <p className="text-[10px] font-black uppercase text-slate-500">Échecs</p>
+                          <p className="mt-1 text-xl font-black text-slate-900">{analytics.failedCount}</p>
+                        </div>
+                        <div className="rounded-lg bg-slate-50 border border-slate-200 p-3">
+                          <p className="text-[10px] font-black uppercase text-slate-500">Auto-envois</p>
+                          <p className="mt-1 text-xl font-black text-slate-900">{analytics.automationCount}</p>
+                        </div>
+                        <div className="rounded-lg bg-slate-50 border border-slate-200 p-3">
+                          <p className="text-[10px] font-black uppercase text-slate-500">Taux délivrance</p>
+                          <p className="mt-1 text-xl font-black text-slate-900">{analytics.deliveryRate}%</p>
+                        </div>
+                      </div>
+                      <div className="mt-3 text-[11px] font-bold text-slate-500">
+                        Leads créés ({analyticsRangeLabel}): {analytics.leadsCreatedInPeriod} • Taux perte: {analytics.lostRate}% • Communications: {analytics.commsInPeriodCount}
+                      </div>
+                    </div>
+                  </div>
+                </section>
 
                 {role === 'commercial' ? (
                   <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
