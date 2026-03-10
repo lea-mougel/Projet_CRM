@@ -7,6 +7,14 @@ import { AppModule } from '../src/app.module';
 // Express 5 emits an app.router deprecation warning during bootstrap.
 process.throwDeprecation = false;
 process.noDeprecation = true;
+const originalEmitWarning = process.emitWarning.bind(process);
+process.emitWarning = ((warning: any, ...args: any[]) => {
+  const message = typeof warning === 'string' ? warning : warning?.message;
+  if (typeof message === 'string' && message.includes("'app.router' is deprecated")) {
+    return;
+  }
+  return originalEmitWarning(warning, ...args);
+}) as typeof process.emitWarning;
 
 let cachedExpressApp: ReturnType<typeof express> | null = null;
 
