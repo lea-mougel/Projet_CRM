@@ -2,7 +2,7 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { ShieldAlert, Megaphone, Settings, Pencil } from 'lucide-react';
-import { contactsApi } from '../api/contacts.api';
+import { contactsApi, DEBUG_API_BASE_URL } from '../api/contacts.api';
 
 // Module-level cache — survives client-side navigation (component unmount/remount)
 type DashboardCache = {
@@ -90,6 +90,7 @@ export default function Dashboard({ session }: { session: DashboardSession }) {
   // Skip blocking spinner if we already have cached data from a previous visit
   const [loading, setLoading] = useState(_dashboardCache === null);
   const [adminMessage, setAdminMessage] = useState<string | null>(null);
+  const [apiError, setApiError] = useState<string | null>(null);
 
   useEffect(() => {
     const savedThreshold = localStorage.getItem('crm-hot-lead-threshold');
@@ -113,6 +114,7 @@ export default function Dashboard({ session }: { session: DashboardSession }) {
   const loadData = useCallback(async (silent = false) => {
     try {
       if (!silent) setLoading(true);
+      setApiError(null);
 
       const { data: profile, error } = await supabase
         .from('profiles')
@@ -166,7 +168,9 @@ export default function Dashboard({ session }: { session: DashboardSession }) {
         setRole('user');
       }
     } catch (err) {
-      console.error('Erreur système :', err);
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error('[Dashboard] Erreur chargement data — API URL:', DEBUG_API_BASE_URL, '— Erreur:', msg);
+      setApiError(`Erreur chargement données (API: ${DEBUG_API_BASE_URL}) — ${msg}`);
     } finally {
       setLoading(false);
     }
@@ -346,6 +350,20 @@ export default function Dashboard({ session }: { session: DashboardSession }) {
 
   if (loading)
     return <div className="p-20 text-center font-black text-blue-600 animate-pulse">VÉRIFICATION DES ACCÈS...</div>;
+
+  if (apiError)
+    return (
+      <div className="p-10 max-w-2xl mx-auto">
+        <div className="bg-red-50 border-2 border-red-400 rounded-xl p-6 text-red-800">
+          <p className="font-black text-lg mb-2">Erreur de connexion au backend</p>
+          <p className="text-sm font-mono break-all">{apiError}</p>
+          <p className="mt-4 text-sm">Vérifiez dans Vercel que <strong>NEXT_PUBLIC_API_URL</strong> (frontend) et <strong>SUPABASE_SERVICE_ROLE_KEY</strong> (backend) sont bien configurés.</p>
+          <button onClick={() => loadData(false)} className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg font-bold text-sm hover:bg-red-700">
+            Réessayer
+          </button>
+        </div>
+      </div>
+    );
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900 pb-12 font-sans">

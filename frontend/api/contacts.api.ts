@@ -246,7 +246,10 @@ function resolveApiBaseUrl(): string {
 
 const API_BASE_URL = resolveApiBaseUrl();
 
-// Wraps fetch with a 12 s AbortController timeout — prevents infinite loading on slow serverless cold starts.
+// Exported for diagnostic logging
+export const DEBUG_API_BASE_URL = API_BASE_URL;
+
+// Wraps fetch with a 12s AbortController timeout - prevents infinite loading on slow serverless cold starts.
 function apiFetch(input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 12000);
