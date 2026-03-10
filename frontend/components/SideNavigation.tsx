@@ -58,26 +58,34 @@ export default function SideNavigation() {
 
   useEffect(() => {
     const checkRole = async () => {
-      const { data, error } = await supabase.auth.getSession();
-      if (error || !data?.session) {
-        setLoading(false);
-        return;
-      }
-
       try {
-        const profile = await contactsApi.getUserProfile(data.session.user.id);
-        if (profile && profile.role === 'admin') {
-          setIsAdmin(true);
+        const { data, error } = await supabase.auth.getSession();
+        if (error || !data?.session) {
+          setLoading(false);
+          return;
         }
-      } catch (err) {
-        console.error('Erreur profil:', err);
-      }
 
-      setLoading(false);
+        try {
+          // Timeout: ne pas attendre plus de 3s pour le profil
+          const profilePromise = contactsApi.getUserProfile(data.session.user.id);
+          const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Timeout')), 3000)
+          );
+          const profile = await Promise.race([profilePromise, timeoutPromise]) as { role: string };
+          if (profile && profile.role === 'admin') {
+            setIsAdmin(true);
+          }
+        } catch (err) {
+          // Continuer même si le profil ne charge pas
+          console.error('Erreur profil (non-critique):', err);
+        }
+      } finally {
+        setLoading(false);
+      }
     };
 
     checkRole();
-  }, [supabase.auth]);
+  }, [supabase]);
 
   const navItems = useMemo(() => {
     let items = [...baseNavItems];
