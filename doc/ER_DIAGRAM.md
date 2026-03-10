@@ -79,4 +79,5 @@ erDiagram
 ## Notes
 
 - Le statut lead utilise les valeurs réelles de l'application: nouveau, en cours, converti, perdu.
-- Les entités tasks/emailings sont volontairement exclues de ce diagramme car non implémentées dans la version actuelle.
+- Ce diagramme reste centré sur le coeur CRM (contacts, entreprises, leads, profils).
+- Les modules tasks et communications/emailing sont implémentés dans l'application mais volontairement exclus ici pour garder une vue lisible.

@@ -68,6 +68,22 @@
   - Insights
   - Détails des leads
 
+### 7) Tâches
+
+- UC-031 Consulter la liste des tâches
+- UC-032 Créer une tâche liée à un contact ou un lead
+- UC-033 Modifier une tâche (titre, date, statut)
+- UC-034 Supprimer une tâche
+- UC-035 Marquer une tâche comme terminée/non terminée
+
+### 8) Communications et emailing
+
+- UC-036 Consulter l'historique des communications
+- UC-037 Envoyer un email manuel
+- UC-038 Filtrer les communications par statut
+- UC-039 Configurer les règles d'automatisation (admin)
+- UC-040 Activer/désactiver l'automatisation (admin)
+
 ---
 
 ## Permissions synthétiques
@@ -78,6 +94,9 @@
 | Contacts | Oui | Oui | Limité |
 | Entreprises | Oui | Oui | Limité |
 | Leads | Oui | Oui | Non |
+| Tâches | Oui | Oui | Non |
+| Communications | Oui | Oui | Non |
+| Paramètres automation | Oui | Non | Non |
 | Pipeline | Oui (global) | Oui (personnel + global selon vue) | Non |
 | Commerciaux (sidebar + détail) | Oui | Non | Non |
 
@@ -85,6 +104,4 @@
 
 ## Backlog non implémenté
 
-- Gestion des tâches (feature 6)
-- Automatisation emailing Brevo (feature 7)
 - Dashboard analytique avancé complet (feature 8)

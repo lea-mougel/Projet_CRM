@@ -91,6 +91,36 @@
 
 ## 5) Hors périmètre actuel (prévu)
 
+- Dashboard analytique avancé complet (consolidation finale)
+
+## 6) Modules implémentés en plus du coeur CRM
+
 - tasks
-- emailing automatisé
-- dashboard analytique complet
+  - gestion CRUD des taches liees aux contacts/leads
+  - filtrage par role (admin global, commercial sur ses elements)
+
+- communications
+  - envoi manuel d'emails via backend
+  - historique des communications
+  - statut d'envoi (pending, sent, failed)
+
+- automation settings
+  - parametrage de l'automatisation (enabled, sujet, body, cooldown, limites)
+  - modification reservee admin
+
+## 7) Configuration technique (local et Vercel)
+
+- Backend (.env)
+  - SUPABASE_URL=https://<project-ref>.supabase.co
+  - SUPABASE_SERVICE_ROLE_KEY=<server key>
+  - Ne pas utiliser une cle publishable/anon dans SUPABASE_SERVICE_ROLE_KEY.
+
+- Frontend (.env.local)
+  - NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
+  - NEXT_PUBLIC_SUPABASE_ANON_KEY=<publishable key>
+  - NEXT_PUBLIC_API_URL=http://localhost:3000 (local)
+
+- Production Vercel
+  - Frontend: NEXT_PUBLIC_API_URL=https://<backend>.vercel.app
+  - Backend: FRONTEND_URL=https://<frontend>.vercel.app
+  - Backend: SUPABASE_SERVICE_ROLE_KEY doit etre une cle serveur valide.
