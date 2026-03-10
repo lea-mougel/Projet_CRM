@@ -118,12 +118,6 @@ export default function PipelinePage() {
     }
   }, [loading, loadLeads, loadCompanies, loadContacts]);
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    localStorage.clear();
-    window.location.href = '/login';
-  };
-
   // Filtrer les leads selon le contexte
   const filteredLeads = useMemo(() => {
     if (!currentUser) return leads;
@@ -149,12 +143,6 @@ export default function PipelinePage() {
             </div>
             <h1 className="text-2xl font-bold text-slate-900">Pipeline de Vente</h1>
           </div>
-          <button
-            onClick={handleLogout}
-            className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
-          >
-            Déconnexion
-          </button>
         </div>
       </header>
 
