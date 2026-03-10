@@ -110,10 +110,10 @@ export default function Dashboard({ session }: { session: DashboardSession }) {
     setIsEditingHotLeadThreshold(false);
   };
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (silent = false) => {
     try {
-      setLoading(true);
-      
+      if (!silent) setLoading(true);
+
       const { data: profile, error } = await supabase
         .from('profiles')
         .select('role')
@@ -173,7 +173,8 @@ export default function Dashboard({ session }: { session: DashboardSession }) {
   }, [session.user.id, supabase]);
 
   useEffect(() => {
-    loadData();
+    // If cache exists, refresh silently so the spinner never re-appears on navigation
+    loadData(_dashboardCache !== null);
   }, [loadData]);
 
   const assignContact = async (contactId: string, commercialId: string) => {
@@ -184,7 +185,7 @@ export default function Dashboard({ session }: { session: DashboardSession }) {
 
     if (!error) {
       setAdminMessage('Contact réassigné.');
-      loadData();
+      loadData(false);
     } else {
       setAdminMessage('Erreur : Permission refusée.');
     }
@@ -199,7 +200,7 @@ export default function Dashboard({ session }: { session: DashboardSession }) {
     const { error } = await supabase.from('profiles').update({ role: nextRole }).eq('id', userId);
     if (!error) {
       setAdminMessage(`Grade modifié : ${nextRole.toUpperCase()}`);
-      loadData();
+      loadData(false);
     } else {
       setAdminMessage('Erreur : Seul un Admin peut faire ça.');
     }

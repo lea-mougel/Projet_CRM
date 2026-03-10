@@ -74,6 +74,9 @@ export default function CommunicationsPage() {
   );
 
   useEffect(() => {
+    // Cache already loaded — skip full re-init, data is shown instantly from cache
+    if (_commsCache !== null) return;
+
     const init = async () => {
       try {
         const {
