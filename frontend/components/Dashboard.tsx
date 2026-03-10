@@ -114,11 +114,16 @@ export default function Dashboard({ session }: { session: DashboardSession }) {
         setRole(profile.role);
 
         if (profile.role === 'admin' || profile.role === 'commercial') {
-          const [contactsList, leadsList, tasksList, communicationsList] = await Promise.all([
-            contactsApi.getAll('', profile.role === 'admin'),
-            contactsApi.getAllLeads(),
-            contactsApi.getAllTasks(),
-            contactsApi.getCommunications(),
+          const [contactsList, leadsList, tasksList, communicationsList] = await Promise.race([
+            Promise.all([
+              contactsApi.getAll('', profile.role === 'admin'),
+              contactsApi.getAllLeads(),
+              contactsApi.getAllTasks(),
+              contactsApi.getCommunications(),
+            ]),
+            new Promise<never>((_, reject) =>
+              setTimeout(() => reject(new Error('API timeout: backend trop lent')), 15000),
+            ),
           ]);
 
           setContacts(contactsList as ContactRecord[]);

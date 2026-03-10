@@ -246,6 +246,13 @@ function resolveApiBaseUrl(): string {
 
 const API_BASE_URL = resolveApiBaseUrl();
 
+// Wraps fetch with a 12 s AbortController timeout — prevents infinite loading on slow serverless cold starts.
+function apiFetch(input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 12000);
+  return fetch(input, { ...init, signal: controller.signal }).finally(() => clearTimeout(timeoutId));
+}
+
 async function getAuthHeaders(): Promise<Record<string, string>> {
   const { data, error } = await supabase.auth.getSession();
   const headers: Record<string, string> = {
@@ -289,14 +296,14 @@ export const contactsApi = {
     const query = params.toString();
     const url = `${API_BASE_URL}/contacts${query ? `?${query}` : ''}`;
     const headers = await getAuthHeaders();
-    const response = await fetch(url, { method: 'GET', headers });
+    const response = await apiFetch(url, { method: 'GET', headers });
 
     return parseResponse<Contact[]>(response);
   },
 
   async create(payload: ContactPayload): Promise<Contact> {
     const headers = await getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/contacts`, {
+    const response = await apiFetch(`${API_BASE_URL}/contacts`, {
       method: 'POST',
       headers,
       body: JSON.stringify(payload),
@@ -307,7 +314,7 @@ export const contactsApi = {
 
   async update(id: string, payload: Partial<ContactPayload>): Promise<Contact> {
     const headers = await getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/contacts/${id}`, {
+    const response = await apiFetch(`${API_BASE_URL}/contacts/${id}`, {
       method: 'PATCH',
       headers,
       body: JSON.stringify(payload),
@@ -318,7 +325,7 @@ export const contactsApi = {
 
   async remove(id: string): Promise<{ success: boolean }> {
     const headers = await getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/contacts/${id}`, {
+    const response = await apiFetch(`${API_BASE_URL}/contacts/${id}`, {
       method: 'DELETE',
       headers,
     });
@@ -330,7 +337,7 @@ export const contactsApi = {
     const params = new URLSearchParams();
     if (includeAll) params.set('includeAll', 'true');
     const query = params.toString();
-    const response = await fetch(`${API_BASE_URL}/contacts/${id}${query ? `?${query}` : ''}`, {
+    const response = await apiFetch(`${API_BASE_URL}/contacts/${id}${query ? `?${query}` : ''}`, {
       method: 'GET',
     });
 
@@ -342,7 +349,7 @@ export const contactsApi = {
     if (includeAll) params.set('includeAll', 'true');
     const query = params.toString();
 
-    const response = await fetch(`${API_BASE_URL}/contacts/companies/${companyId}${query ? `?${query}` : ''}`, {
+    const response = await apiFetch(`${API_BASE_URL}/contacts/companies/${companyId}${query ? `?${query}` : ''}`, {
       method: 'GET',
     });
 
@@ -354,7 +361,7 @@ export const contactsApi = {
     if (search?.trim()) params.set('search', search.trim());
     const query = params.toString();
 
-    const response = await fetch(`${API_BASE_URL}/contacts/companies${query ? `?${query}` : ''}`, {
+    const response = await apiFetch(`${API_BASE_URL}/contacts/companies${query ? `?${query}` : ''}`, {
       method: 'GET',
     });
 
@@ -363,7 +370,7 @@ export const contactsApi = {
 
   async createCompany(payload: CompanyPayload): Promise<CompanyListItem> {
     const headers = await getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/companies`, {
+    const response = await apiFetch(`${API_BASE_URL}/companies`, {
       method: 'POST',
       headers,
       body: JSON.stringify(payload),
@@ -374,7 +381,7 @@ export const contactsApi = {
 
   async updateCompany(id: string, payload: CompanyPayload): Promise<CompanyListItem> {
     const headers = await getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/companies/${id}`, {
+    const response = await apiFetch(`${API_BASE_URL}/companies/${id}`, {
       method: 'PATCH',
       headers,
       body: JSON.stringify(payload),
@@ -385,7 +392,7 @@ export const contactsApi = {
 
   async deleteCompany(id: string): Promise<{ success: boolean }> {
     const headers = await getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/companies/${id}`, {
+    const response = await apiFetch(`${API_BASE_URL}/companies/${id}`, {
       method: 'DELETE',
       headers,
     });
@@ -394,7 +401,7 @@ export const contactsApi = {
   },
 
   async getContactNotes(contactId: string): Promise<ContactNote[]> {
-    const response = await fetch(`${API_BASE_URL}/contacts/${contactId}/notes`, {
+    const response = await apiFetch(`${API_BASE_URL}/contacts/${contactId}/notes`, {
       method: 'GET',
     });
 
@@ -403,7 +410,7 @@ export const contactsApi = {
 
   async createContactNote(contactId: string, content: string, type: string): Promise<ContactNote> {
     const headers = await getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/contacts/${contactId}/notes`, {
+    const response = await apiFetch(`${API_BASE_URL}/contacts/${contactId}/notes`, {
       method: 'POST',
       headers,
       body: JSON.stringify({ content, type }),
@@ -414,7 +421,7 @@ export const contactsApi = {
 
   async getUnassignedContacts(): Promise<Contact[]> {
     const headers = await getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/contacts?company_id=null`, {
+    const response = await apiFetch(`${API_BASE_URL}/contacts?company_id=null`, {
       method: 'GET',
       headers,
     });
@@ -424,7 +431,7 @@ export const contactsApi = {
 
   async getAllLeads(): Promise<Lead[]> {
     const headers = await getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/leads`, {
+    const response = await apiFetch(`${API_BASE_URL}/leads`, {
       method: 'GET',
       headers,
     });
@@ -434,7 +441,7 @@ export const contactsApi = {
 
   async getLeadById(id: string): Promise<Lead> {
     const headers = await getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/leads/${id}`, {
+    const response = await apiFetch(`${API_BASE_URL}/leads/${id}`, {
       method: 'GET',
       headers,
     });
@@ -444,7 +451,7 @@ export const contactsApi = {
 
   async createLead(payload: CreateLeadPayload): Promise<Lead> {
     const headers = await getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/leads`, {
+    const response = await apiFetch(`${API_BASE_URL}/leads`, {
       method: 'POST',
       headers,
       body: JSON.stringify(payload),
@@ -455,7 +462,7 @@ export const contactsApi = {
 
   async updateLead(id: string, payload: Partial<CreateLeadPayload>): Promise<Lead> {
     const headers = await getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/leads/${id}`, {
+    const response = await apiFetch(`${API_BASE_URL}/leads/${id}`, {
       method: 'PATCH',
       headers,
       body: JSON.stringify(payload),
@@ -466,7 +473,7 @@ export const contactsApi = {
 
   async deleteLead(id: string): Promise<{ success: boolean }> {
     const headers = await getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/leads/${id}`, {
+    const response = await apiFetch(`${API_BASE_URL}/leads/${id}`, {
       method: 'DELETE',
       headers,
     });
@@ -488,7 +495,7 @@ export const contactsApi = {
 
   async getAllTasks(): Promise<Task[]> {
     const headers = await getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/tasks`, {
+    const response = await apiFetch(`${API_BASE_URL}/tasks`, {
       method: 'GET',
       headers,
     });
@@ -498,7 +505,7 @@ export const contactsApi = {
 
   async createTask(payload: TaskPayload): Promise<Task> {
     const headers = await getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/tasks`, {
+    const response = await apiFetch(`${API_BASE_URL}/tasks`, {
       method: 'POST',
       headers,
       body: JSON.stringify(payload),
@@ -509,7 +516,7 @@ export const contactsApi = {
 
   async updateTask(id: string, payload: Partial<TaskPayload> & { is_completed?: boolean }): Promise<Task> {
     const headers = await getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/tasks/${id}`, {
+    const response = await apiFetch(`${API_BASE_URL}/tasks/${id}`, {
       method: 'PATCH',
       headers,
       body: JSON.stringify(payload),
@@ -520,7 +527,7 @@ export const contactsApi = {
 
   async deleteTask(id: string): Promise<{ success: boolean }> {
     const headers = await getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/tasks/${id}`, {
+    const response = await apiFetch(`${API_BASE_URL}/tasks/${id}`, {
       method: 'DELETE',
       headers,
     });
@@ -530,7 +537,7 @@ export const contactsApi = {
 
   async getCommunications(): Promise<Communication[]> {
     const headers = await getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/communications`, {
+    const response = await apiFetch(`${API_BASE_URL}/communications`, {
       method: 'GET',
       headers,
     });
@@ -540,7 +547,7 @@ export const contactsApi = {
 
   async sendCommunication(payload: SendCommunicationPayload): Promise<Communication> {
     const headers = await getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/communications/send`, {
+    const response = await apiFetch(`${API_BASE_URL}/communications/send`, {
       method: 'POST',
       headers,
       body: JSON.stringify(payload),
@@ -551,7 +558,7 @@ export const contactsApi = {
 
   async getAutomationSettings(): Promise<AutomationSettings> {
     const headers = await getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/communications/automation-settings`, {
+    const response = await apiFetch(`${API_BASE_URL}/communications/automation-settings`, {
       method: 'GET',
       headers,
     });
@@ -561,7 +568,7 @@ export const contactsApi = {
 
   async updateAutomationSettings(payload: Partial<AutomationSettings>): Promise<AutomationSettings> {
     const headers = await getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/communications/automation-settings`, {
+    const response = await apiFetch(`${API_BASE_URL}/communications/automation-settings`, {
       method: 'PATCH',
       headers,
       body: JSON.stringify(payload),
