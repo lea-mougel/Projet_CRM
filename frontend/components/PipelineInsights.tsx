@@ -12,6 +12,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import { Lead } from '../api/contacts.api';
+import { isLostStage, isOpenStage, isWonStage, normalizeLeadStatus } from '../lib/salesPipeline';
 
 interface PipelineInsightsProps {
   leads: Lead[];
@@ -19,12 +20,14 @@ interface PipelineInsightsProps {
 }
 
 export default function PipelineInsights({ leads, userRole = 'user' }: PipelineInsightsProps) {
-  // Grouper les leads par statut
+  // Grouper les leads par statut logique (normalise les anciens et nouveaux statuts)
   const leadsByStatus = {
-    nouveau: leads.filter((l) => l.status === 'nouveau'),
-    'en cours': leads.filter((l) => l.status === 'en cours'),
-    converti: leads.filter((l) => l.status === 'converti'),
-    perdu: leads.filter((l) => l.status === 'perdu'),
+    nouveau: leads.filter((l) => normalizeLeadStatus(l.status) === 'Nouveau Lead'),
+    'en cours': leads.filter(
+      (l) => !isWonStage(l.status) && !isLostStage(l.status) && normalizeLeadStatus(l.status) !== 'Nouveau Lead',
+    ),
+    converti: leads.filter((l) => isWonStage(l.status)),
+    perdu: leads.filter((l) => isLostStage(l.status)),
   };
 
   // Grouper les leads par commercial
@@ -56,9 +59,13 @@ export default function PipelineInsights({ leads, userRole = 'user' }: PipelineI
   // Calculs KPI
   const totalValue = leads.reduce((acc, l) => acc + (Number(l.estimated_value) || 0), 0);
   const avgValue = leads.length > 0 ? totalValue / leads.length : 0;
-  const convertionRate = leads.length > 0 ? (leadsByStatus.converti.length / leadsByStatus.nouveau.length) * 100 : 0;
-  const wontValue = leadsByStatus.perdu.reduce((acc, l) => acc + (Number(l.estimated_value) || 0), 0);
+  const convertionRate =
+    leadsByStatus.nouveau.length > 0 ? (leadsByStatus.converti.length / leadsByStatus.nouveau.length) * 100 : 0;
+  const lostValue = leadsByStatus.perdu.reduce((acc, l) => acc + (Number(l.estimated_value) || 0), 0);
   const wonValue = leadsByStatus.converti.reduce((acc, l) => acc + (Number(l.estimated_value) || 0), 0);
+  const inPlayValue = leads
+    .filter((l) => isOpenStage(l.status))
+    .reduce((acc, l) => acc + (Number(l.estimated_value) || 0), 0);
 
   return (
     <div className="space-y-8">
@@ -152,7 +159,7 @@ export default function PipelineInsights({ leads, userRole = 'user' }: PipelineI
                   })
                   .map(([commercial, leadsForCommercial]) => {
                     const value = leadsForCommercial.reduce((acc, l) => acc + (Number(l.estimated_value) || 0), 0);
-                    const converted = leadsForCommercial.filter((l) => l.status === 'converti').length;
+                    const converted = leadsForCommercial.filter((l) => isWonStage(l.status)).length;
                     return (
                       <tr key={commercial} className="border-b border-slate-100 hover:bg-slate-50">
                         <td className="py-3 px-4 font-semibold text-slate-900">{commercial}</td>
@@ -181,7 +188,7 @@ export default function PipelineInsights({ leads, userRole = 'user' }: PipelineI
             .sort((a, b) => b[1].length - a[1].length)
             .map(([source, leadsForSource]) => {
               const value = leadsForSource.reduce((acc, l) => acc + (Number(l.estimated_value) || 0), 0);
-              const percentage = ((leadsForSource.length / leads.length) * 100).toFixed(1);
+              const percentage = leads.length > 0 ? ((leadsForSource.length / leads.length) * 100).toFixed(1) : '0.0';
               return (
                 <div
                   key={source}
@@ -218,17 +225,11 @@ export default function PipelineInsights({ leads, userRole = 'user' }: PipelineI
           </div>
           <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-lg p-6 border border-red-200">
             <p className="text-sm text-slate-700 mb-2">Valeur perdue</p>
-            <p className="text-3xl font-bold text-red-600">{wontValue.toLocaleString()} €</p>
+            <p className="text-3xl font-bold text-red-600">{lostValue.toLocaleString()} €</p>
           </div>
           <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-6 border border-blue-200">
             <p className="text-sm text-slate-700 mb-2">Valeur en jeu</p>
-            <p className="text-3xl font-bold text-blue-600">
-              {(
-                leadsByStatus['en cours'].reduce((acc, l) => acc + (Number(l.estimated_value) || 0), 0) +
-                leadsByStatus.nouveau.reduce((acc, l) => acc + (Number(l.estimated_value) || 0), 0)
-              ).toLocaleString()}
-              €
-            </p>
+            <p className="text-3xl font-bold text-blue-600">{inPlayValue.toLocaleString()} €</p>
           </div>
         </div>
       </div>
