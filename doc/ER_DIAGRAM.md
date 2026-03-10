@@ -56,7 +56,7 @@ erDiagram
         string title
         uuid contact_id FK
         uuid company_id FK
-        string status "nouveau|en cours|converti|perdu"
+        string status "DB: nouveau|en cours|converti|perdu"
         string source
         string description
         numeric estimated_value
@@ -78,6 +78,7 @@ erDiagram
 
 ## Notes
 
-- Le statut lead utilise les valeurs réelles de l'application: nouveau, en cours, converti, perdu.
+- Le statut lead stocke actuellement des valeurs legacy en base (nouveau, en cours, converti, perdu).
+- L'UI pipeline utilise des statuts metier (Nouveau Lead ... Gagne/Perdu) avec mapping applicatif.
 - Ce diagramme reste centré sur le coeur CRM (contacts, entreprises, leads, profils).
 - Les modules tasks et communications/emailing sont implémentés dans l'application mais volontairement exclus ici pour garder une vue lisible.

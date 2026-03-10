@@ -51,6 +51,7 @@
 - UC-025 Filtrer l'affichage selon le rôle
   - admin: insights globaux + performance par commercial
   - commercial: insights sans performance inter-commerciaux
+  - pipeline: admin = globale uniquement, commercial = personnelle uniquement
 
 ### 6) Module commerciaux (admin)
 
@@ -97,7 +98,7 @@
 | Tâches | Oui | Oui | Non |
 | Communications | Oui | Oui | Non |
 | Paramètres automation | Oui | Non | Non |
-| Pipeline | Oui (global) | Oui (personnel + global selon vue) | Non |
+| Pipeline | Oui (global uniquement) | Oui (personnel uniquement) | Non |
 | Commerciaux (sidebar + détail) | Oui | Non | Non |
 
 ---

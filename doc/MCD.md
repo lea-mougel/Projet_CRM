@@ -39,7 +39,7 @@
   - title
   - contact_id (FK -> contacts.id)
   - company_id (FK -> companies.id)
-  - status (nouveau | en cours | converti | perdu)
+  - status (stockage DB actuel: nouveau | en cours | converti | perdu)
   - source
   - description
   - estimated_value
@@ -68,9 +68,10 @@
 - profiles 1-N contact_notes (author)
 - auth.users 1-N contacts (créateur)
 
-## 3) Règles métier observées
+## 3) Regles metier observees
 
-- Les leads suivent un cycle à 4 statuts: nouveau, en cours, converti, perdu.
+- Le pipeline metier affiche 7 etapes: Nouveau Lead, Decouverte des besoins (Audit), Demonstration 3DEXPERIENCE, POC (Proof of Concept), Negociation contractuelle, Gagne, Perdu.
+- Le stockage DB reste compatible avec les statuts legacy (nouveau, en cours, converti, perdu) via mapping applicatif.
 - L'affectation commerciale est portée par assigned_to sur contacts et leads.
 - Les insights pipeline sont filtrés selon le rôle:
   - admin: vision globale
@@ -81,10 +82,11 @@
 - Admin
   - accès global aux données commerciales
   - accès au module commerciaux
+  - accès pipeline globale uniquement
 
 - Commercial
-  - accès à sa pipeline et aux vues personnelles
-  - accès partiel aux vues globales selon écran
+  - acces a sa pipeline personnelle uniquement
+  - pas d'acces a la pipeline globale
 
 - User
   - accès restreint (hors modules commerciaux avancés)
