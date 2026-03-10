@@ -206,6 +206,7 @@ function resolveApiBaseUrl(): string {
   const configured = process.env.NEXT_PUBLIC_API_URL?.trim();
 
   const localhostFallback = 'http://localhost:3002';
+  const vercelBackendFallback = 'https://projet-crm-back.vercel.app';
 
   if (configured) {
     try {
@@ -228,7 +229,16 @@ function resolveApiBaseUrl(): string {
   }
 
   if (typeof window !== 'undefined' && window.location?.hostname) {
-    return `http://${window.location.hostname}:3002`;
+    const hostname = window.location.hostname;
+
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      return `http://${hostname}:3002`;
+    }
+
+    // Safety net for Vercel when NEXT_PUBLIC_API_URL is missing in project settings.
+    if (hostname.endsWith('.vercel.app')) {
+      return vercelBackendFallback;
+    }
   }
 
   return localhostFallback;

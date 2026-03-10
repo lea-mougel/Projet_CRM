@@ -21,8 +21,9 @@ async function bootstrap() {
 
       const isLocalhost = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
       const isConfigured = configuredOrigins.includes(origin);
+      const isVercelPreview = /^https:\/\/.*\.vercel\.app$/.test(origin);
 
-      if (isLocalhost || isConfigured) {
+      if (isLocalhost || isConfigured || isVercelPreview) {
         callback(null, true);
         return;
       }
