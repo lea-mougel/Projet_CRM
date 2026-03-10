@@ -2,12 +2,13 @@
 import { useState, useEffect } from 'react';
 import { UserRound } from 'lucide-react';
 import { contactsApi } from '../api/contacts.api';
+import { PIPELINE_STAGES, normalizeLeadStatus, stageColorClass } from '../lib/salesPipeline';
 
 interface Lead {
   id: string;
   title: string;
   amount: number;
-  status: 'nouveau' | 'en cours' | 'converti' | 'perdu';
+  status: string;
   source?: string;
   description?: string;
   estimated_value?: number;
@@ -49,12 +50,7 @@ export default function Pipeline() {
     loadLeads();
   }, []);
 
-  const statuses = [
-    { id: 'nouveau', label: 'Nouveau', color: 'bg-blue-500' },
-    { id: 'en cours', label: 'En Cours', color: 'bg-yellow-500' },
-    { id: 'converti', label: 'Converti', color: 'bg-green-500' },
-    { id: 'perdu', label: 'Perdu', color: 'bg-red-500' }
-  ];
+  const statuses = PIPELINE_STAGES;
 
   const totalAmount = leads.reduce((acc, lead) => acc + (Number(lead.amount) || 0), 0);
 
@@ -73,19 +69,19 @@ export default function Pipeline() {
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {statuses.map(status => (
             <div key={status.id} className="bg-slate-200/50 p-4 rounded-2xl border-2 border-slate-200">
               <div className="flex items-center gap-2 mb-4">
-                <div className={`w-3 h-3 rounded-full ${status.color}`}></div>
+                <div className={`w-3 h-3 rounded-full ${status.colorClass}`}></div>
                 <h3 className="font-black text-slate-700 uppercase text-sm">{status.label}</h3>
                 <span className="ml-auto bg-slate-300 text-slate-600 text-[10px] px-2 py-0.5 rounded-full">
-                  {leads.filter(l => l.status === status.id).length}
+                  {leads.filter((l) => normalizeLeadStatus(l.status) === status.id).length}
                 </span>
               </div>
 
               <div className="space-y-3">
-                {leads.filter(l => l.status === status.id).map(lead => (
+                {leads.filter((l) => normalizeLeadStatus(l.status) === status.id).map(lead => (
                   <button
                     key={lead.id}
                     onClick={() => setSelectedLead(lead)}
@@ -127,12 +123,9 @@ export default function Pipeline() {
               <div>
                 <span className="font-semibold text-slate-700">Statut:</span>
                 <span className={`inline-block ml-2 px-3 py-1 rounded-lg text-white font-bold text-sm ${
-                  selectedLead.status === 'nouveau' ? 'bg-blue-500' :
-                  selectedLead.status === 'en cours' ? 'bg-yellow-500' :
-                  selectedLead.status === 'converti' ? 'bg-green-500' :
-                  'bg-red-500'
+                  stageColorClass(selectedLead.status)
                 }`}>
-                  {selectedLead.status}
+                  {normalizeLeadStatus(selectedLead.status)}
                 </span>
               </div>
 

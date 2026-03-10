@@ -1,5 +1,6 @@
 'use client';
 import { createClient } from '@supabase/supabase-js';
+import type { LeadStatus } from '../lib/salesPipeline';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -82,7 +83,7 @@ export type Lead = {
   id: string;
   title: string;
   estimated_value?: number;
-  status: 'nouveau' | 'en cours' | 'converti' | 'perdu';
+  status: LeadStatus;
   company_id?: string | null;
   contact_id?: string | null;
   source?: string | null;
@@ -108,7 +109,7 @@ export type Lead = {
 export type CreateLeadPayload = {
   title: string;
   estimated_value?: number;
-  status?: 'nouveau' | 'en cours' | 'converti' | 'perdu';
+  status?: LeadStatus;
   company_id?: string | null;
   contact_id?: string | null;
   source?: string | null;
@@ -144,7 +145,7 @@ export type Task = {
   lead?: {
     id: string;
     title: string;
-    status: 'nouveau' | 'en cours' | 'converti' | 'perdu';
+    status: LeadStatus;
   } | null;
 };
 
@@ -177,7 +178,7 @@ export type Communication = {
   lead?: {
     id: string;
     title: string;
-    status: 'nouveau' | 'en cours' | 'converti' | 'perdu';
+    status: LeadStatus;
   } | null;
 };
 

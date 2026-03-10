@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { ArrowUpDown, Search, CircleDollarSign, BarChart3, CheckCircle2, Sparkles, Settings2, ScanSearch, X } from 'lucide-react';
 import { Lead } from '../api/contacts.api';
+import { isOpenStage, isWonStage, normalizeLeadStatus } from '../lib/salesPipeline';
 
 interface Commercial {
   id: string;
@@ -28,16 +29,16 @@ export default function CommercialsList({ commercials, leads }: CommercialsListP
     return commercials.map((commercial) => {
       const commercialLeads = leads.filter((l) => l.assigned_to === commercial.id);
       
-      const nouveau = commercialLeads.filter((l) => l.status === 'nouveau').length;
-      const enCours = commercialLeads.filter((l) => l.status === 'en cours').length;
-      const converti = commercialLeads.filter((l) => l.status === 'converti').length;
+      const nouveau = commercialLeads.filter((l) => normalizeLeadStatus(l.status) === 'Nouveau Lead').length;
+      const enCours = commercialLeads.filter((l) => normalizeLeadStatus(l.status) === 'Decouverte des besoins (Audit)').length;
+      const converti = commercialLeads.filter((l) => isWonStage(l.status)).length;
       
       const montantAttente = commercialLeads
-        .filter((l) => l.status === 'nouveau' || l.status === 'en cours')
+        .filter((l) => isOpenStage(l.status))
         .reduce((acc, l) => acc + (Number(l.estimated_value) || 0), 0);
       
       const montantGagne = commercialLeads
-        .filter((l) => l.status === 'converti')
+        .filter((l) => isWonStage(l.status))
         .reduce((acc, l) => acc + (Number(l.estimated_value) || 0), 0);
       
       const conversion = nouveau > 0 ? (converti / nouveau) * 100 : 0;

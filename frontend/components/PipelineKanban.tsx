@@ -2,6 +2,7 @@
 
 import { Sparkles, Settings2, CheckCircle2, XCircle } from 'lucide-react';
 import { Lead } from '../api/contacts.api';
+import { PIPELINE_STAGES, normalizeLeadStatus } from '../lib/salesPipeline';
 
 interface PipelineKanbanProps {
   leads: Lead[];
@@ -9,12 +10,19 @@ interface PipelineKanbanProps {
 }
 
 export default function PipelineKanban({ leads, loadLeads }: PipelineKanbanProps) {
-  const statuses = [
-    { id: 'nouveau', label: 'Nouveau', icon: Sparkles, color: 'bg-blue-500' },
-    { id: 'en cours', label: 'En Cours', icon: Settings2, color: 'bg-yellow-500' },
-    { id: 'converti', label: 'Converti', icon: CheckCircle2, color: 'bg-green-500' },
-    { id: 'perdu', label: 'Perdu', icon: XCircle, color: 'bg-red-500' },
-  ];
+  const statuses = PIPELINE_STAGES.map((stage) => ({
+    ...stage,
+    icon:
+      stage.id === 'Nouveau Lead'
+        ? Sparkles
+        : stage.id === 'Decouverte des besoins (Audit)'
+          ? Settings2
+          : stage.id === 'Gagne'
+            ? CheckCircle2
+            : stage.id === 'Perdu'
+              ? XCircle
+              : Settings2,
+  }));
 
   const totalValue = leads.reduce((acc, curr) => acc + (Number(curr.estimated_value) || 0), 0);
 
@@ -33,11 +41,11 @@ export default function PipelineKanban({ leads, loadLeads }: PipelineKanbanProps
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {statuses.map((status) => {
           const Icon = status.icon;
-          const statusLeads = leads.filter((l) => l.status === status.id);
+          const statusLeads = leads.filter((l) => normalizeLeadStatus(l.status) === status.id);
           const statusValue = statusLeads.reduce((acc, curr) => acc + (Number(curr.estimated_value) || 0), 0);
 
           return (
-            <div key={status.id} className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl p-6 border-l-4" style={{ borderLeftColor: status.color.replace('bg-', '#').match(/\w+/)?.[0] }}>
+            <div key={status.id} className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl p-6 border-l-4" style={{ borderLeftColor: status.colorHex }}>
               {/* Header de colonne */}
               <div className="flex items-center gap-2 mb-4 pb-4 border-b">
                 <Icon className="w-5 h-5 text-slate-700" />

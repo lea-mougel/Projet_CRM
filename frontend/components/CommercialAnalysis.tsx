@@ -5,6 +5,7 @@ import { ClipboardList, UserRound, Users, LineChart, Lightbulb, Sparkles, Settin
 import { Lead, Contact } from '../api/contacts.api';
 import CombinedPipeline from './CombinedPipeline';
 import PipelineInsights from './PipelineInsights';
+import { PIPELINE_STAGES, normalizeLeadStatus } from '../lib/salesPipeline';
 
 interface CommercialAnalysisProps {
   leads: Lead[];
@@ -191,15 +192,25 @@ function LeadsDetailsTab({ leads }: { leads: Lead[] }) {
     return <p className="text-center text-slate-400 italic py-8">Aucun lead assigné</p>;
   }
 
-  const statuses = [
-    { id: 'nouveau', label: 'Nouveau', icon: Sparkles, color: '#3b82f6' },
-    { id: 'en cours', label: 'En Cours', icon: Settings2, color: '#eab308' },
-    { id: 'converti', label: 'Converti', icon: CheckCircle2, color: '#22c55e' },
-    { id: 'perdu', label: 'Perdu', icon: XCircle, color: '#ef4444' },
-  ];
+  const statuses = PIPELINE_STAGES.map((stage) => ({
+    id: stage.id,
+    label: stage.label,
+    icon:
+      stage.id === 'Nouveau Lead'
+        ? Sparkles
+        : stage.id === 'Decouverte des besoins (Audit)'
+          ? Settings2
+          : stage.id === 'Gagne'
+            ? CheckCircle2
+            : stage.id === 'Perdu'
+              ? XCircle
+              : Settings2,
+    color: stage.colorHex,
+  }));
 
   const getStatusInfo = (status: string) => {
-    return statuses.find((s) => s.id === status) || statuses[0];
+    const normalized = normalizeLeadStatus(status);
+    return statuses.find((s) => s.id === normalized) || statuses[0];
   };
 
   return (

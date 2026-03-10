@@ -5,6 +5,7 @@ import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
 import { Pencil, Trash2 } from 'lucide-react';
 import { contactsApi, Lead } from '../../api/contacts.api';
+import { PIPELINE_STAGES, normalizeLeadStatus, stageColorClass, stageColorHex } from '../../lib/salesPipeline';
 
 type CurrentUser = {
   id: string;
@@ -40,7 +41,7 @@ export default function LeadsPage() {
   const [createForm, setCreateForm] = useState({
     title: '',
     estimated_value: '',
-    status: 'nouveau',
+    status: 'Nouveau Lead',
     company_id: '',
     contact_id: '',
     source: '',
@@ -104,7 +105,7 @@ export default function LeadsPage() {
       setCreateForm({
         title: '',
         estimated_value: '',
-        status: 'nouveau',
+        status: 'Nouveau Lead',
         company_id: '',
         contact_id: '',
         source: '',
@@ -114,7 +115,8 @@ export default function LeadsPage() {
       await loadLeads();
     } catch (error) {
       console.error('Erreur création lead:', error);
-      alert('Erreur lors de la création du lead');
+      const message = error instanceof Error ? error.message : 'Erreur lors de la création du lead';
+      alert(message);
     }
   };
 
@@ -237,14 +239,9 @@ export default function LeadsPage() {
     window.location.href = '/login';
   };
 
-  const statuses = [
-    { id: 'nouveau', label: 'Nouveau', color: 'bg-blue-500' },
-    { id: 'en cours', label: 'En Cours', color: 'bg-yellow-500' },
-    { id: 'converti', label: 'Converti', color: 'bg-green-500' },
-    { id: 'perdu', label: 'Perdu', color: 'bg-red-500' }
-  ];
+  const statuses = PIPELINE_STAGES;
 
-  const filteredLeads = filterStatus ? leads.filter(l => l.status === filterStatus) : leads;
+  const filteredLeads = filterStatus ? leads.filter((l) => normalizeLeadStatus(l.status) === filterStatus) : leads;
   const totalValue = leads.reduce((acc, curr) => acc + (Number(curr.estimated_value) || 0), 0);
 
   if (loading) {
@@ -280,7 +277,7 @@ export default function LeadsPage() {
                 setCreateForm({
                   title: '',
                   estimated_value: '',
-                  status: 'nouveau',
+                  status: 'Nouveau Lead',
                   company_id: '',
                   contact_id: '',
                   source: '',
@@ -293,7 +290,7 @@ export default function LeadsPage() {
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
             {statuses.map(status => (
               <button
                 key={status.id}
@@ -305,10 +302,10 @@ export default function LeadsPage() {
                 }`}
               >
                 <div className="flex items-center gap-2">
-                  <div className={`w-3 h-3 rounded-full ${status.color}`}></div>
+                  <div className={`w-3 h-3 rounded-full ${status.colorClass}`}></div>
                   <h3 className="font-bold text-slate-700 text-sm">{status.label}</h3>
                   <span className="ml-auto bg-slate-200 text-slate-600 text-[10px] px-2 py-0.5 rounded-full">
-                    {leads.filter(l => l.status === status.id).length}
+                    {leads.filter((l) => normalizeLeadStatus(l.status) === status.id).length}
                   </span>
                 </div>
               </button>
@@ -332,13 +329,8 @@ export default function LeadsPage() {
                   </div>
                   <div className="text-right">
                     <p className="font-bold text-blue-700">{(lead.estimated_value || 0).toLocaleString()} €</p>
-                    <span className={`inline-block mt-2 px-2 py-1 rounded text-[10px] font-bold text-white ${
-                      lead.status === 'nouveau' ? 'bg-blue-500' :
-                      lead.status === 'en cours' ? 'bg-yellow-500' :
-                      lead.status === 'converti' ? 'bg-green-500' :
-                      'bg-red-500'
-                    }`}>
-                      {lead.status}
+                    <span className={`inline-block mt-2 px-2 py-1 rounded text-[10px] font-bold text-white ${stageColorClass(lead.status)}`}>
+                      {statuses.find((s) => s.id === normalizeLeadStatus(lead.status))?.label || normalizeLeadStatus(lead.status)}
                     </span>
                   </div>
                 </div>
@@ -378,10 +370,9 @@ export default function LeadsPage() {
                 onChange={(e) => setCreateForm({ ...createForm, status: e.target.value })}
                 className="w-full border border-slate-300 p-2 rounded bg-white"
               >
-                <option value="nouveau">Nouveau</option>
-                <option value="en cours">En Cours</option>
-                <option value="converti">Converti</option>
-                <option value="perdu">Perdu</option>
+                {statuses.map((status) => (
+                  <option key={status.id} value={status.id}>{status.label}</option>
+                ))}
               </select>
               <select
                 value={createForm.company_id}
@@ -475,10 +466,9 @@ export default function LeadsPage() {
                   onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
                   className="w-full border border-slate-300 p-2 rounded bg-white"
                 >
-                  <option value="nouveau">Nouveau</option>
-                  <option value="en cours">En Cours</option>
-                  <option value="converti">Converti</option>
-                  <option value="perdu">Perdu</option>
+                  {statuses.map((status) => (
+                    <option key={status.id} value={status.id}>{status.label}</option>
+                  ))}
                 </select>
                 <select
                   value={editForm.company_id ?? selectedLead.company_id ?? ''}
@@ -549,13 +539,10 @@ export default function LeadsPage() {
                     <p>
                       <span className="inline-block px-3 py-1 rounded-full text-white text-sm font-semibold"
                         style={{
-                          backgroundColor:
-                            selectedLead.status === 'nouveau' ? '#3b82f6' :
-                            selectedLead.status === 'en cours' ? '#eab308' :
-                            selectedLead.status === 'converti' ? '#22c55e' : '#ef4444'
+                          backgroundColor: stageColorHex(selectedLead.status)
                         }}
                       >
-                        {statuses.find(s => s.id === selectedLead.status)?.label}
+                        {statuses.find((s) => s.id === normalizeLeadStatus(selectedLead.status))?.label || normalizeLeadStatus(selectedLead.status)}
                       </span>
                     </p>
                   </div>

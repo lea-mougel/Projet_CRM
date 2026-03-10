@@ -3,6 +3,7 @@ import { useEffect, useState, useMemo, useCallback } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { ShieldAlert, Megaphone, Settings, Pencil } from 'lucide-react';
 import { contactsApi, DEBUG_API_BASE_URL } from '../api/contacts.api';
+import { PIPELINE_STAGES, isOpenStage, isWonStage, isLostStage, normalizeLeadStatus } from '../lib/salesPipeline';
 
 // Module-level cache — survives client-side navigation (component unmount/remount)
 type DashboardCache = {
@@ -253,7 +254,7 @@ export default function Dashboard({ session }: { session: DashboardSession }) {
 
   const commercialLeadsChauds = useMemo(() => {
     return leads
-      .filter((lead) => lead.status === 'en cours' || lead.status === 'nouveau')
+      .filter((lead) => isOpenStage(lead.status))
       .filter((lead) => (Number(lead.estimated_value) || 0) >= hotLeadThreshold)
       .sort((a, b) => (Number(b.estimated_value) || 0) - (Number(a.estimated_value) || 0))
       .slice(0, 6);
@@ -289,12 +290,15 @@ export default function Dashboard({ session }: { session: DashboardSession }) {
         : new Date(now.getTime() - (analyticsRange === '7d' ? 7 : 30) * 24 * 60 * 60 * 1000);
 
     const totalLeads = leads.length;
-    const leadsNouveau = leads.filter((lead) => lead.status === 'nouveau').length;
-    const leadsEnCours = leads.filter((lead) => lead.status === 'en cours').length;
-    const leadsConvertis = leads.filter((lead) => lead.status === 'converti').length;
-    const leadsPerdus = leads.filter((lead) => lead.status === 'perdu').length;
+    const leadsNouveau = leads.filter((lead) => normalizeLeadStatus(lead.status) === 'Nouveau Lead').length;
+    const leadsEnCours = leads.filter((lead) => normalizeLeadStatus(lead.status) === 'Decouverte des besoins (Audit)').length;
+    const leadsConvertis = leads.filter((lead) => isWonStage(lead.status)).length;
+    const leadsPerdus = leads.filter((lead) => isLostStage(lead.status)).length;
 
-    const conversionRate = totalLeads === 0 ? 0 : Math.round((leadsConvertis / totalLeads) * 100);
+    const leadsDemo = leads.filter((lead) => normalizeLeadStatus(lead.status) === 'Demonstration 3DEXPERIENCE').length;
+    const leadsPoc = leads.filter((lead) => normalizeLeadStatus(lead.status) === 'POC (Proof of Concept)').length;
+
+    const conversionRate = leadsDemo === 0 ? 0 : Math.round((leadsPoc / leadsDemo) * 100);
     const lostRate = totalLeads === 0 ? 0 : Math.round((leadsPerdus / totalLeads) * 100);
 
     const leadsCreatedInPeriod = leads.filter((lead) => {
@@ -316,12 +320,11 @@ export default function Dashboard({ session }: { session: DashboardSession }) {
     const automationCount = commsInPeriod.filter((communication) => communication.trigger_type === 'automation').length;
     const deliveryRate = commsInPeriod.length === 0 ? 0 : Math.round((sentCount / commsInPeriod.length) * 100);
 
-    const funnel = [
-      { key: 'nouveau', label: 'Nouveau', count: leadsNouveau },
-      { key: 'en-cours', label: 'En cours', count: leadsEnCours },
-      { key: 'converti', label: 'Converti', count: leadsConvertis },
-      { key: 'perdu', label: 'Perdu', count: leadsPerdus },
-    ];
+    const funnel = PIPELINE_STAGES.map((stage) => ({
+      key: stage.id,
+      label: stage.label,
+      count: leads.filter((lead) => normalizeLeadStatus(lead.status) === stage.id).length,
+    }));
 
     const funnelMax = Math.max(...funnel.map((step) => step.count), 1);
 
@@ -333,6 +336,8 @@ export default function Dashboard({ session }: { session: DashboardSession }) {
       leadsPerdus,
       conversionRate,
       lostRate,
+      leadsDemo,
+      leadsPoc,
       leadsCreatedInPeriod,
       overdueTasksCount,
       commsInPeriodCount: commsInPeriod.length,
@@ -369,7 +374,7 @@ export default function Dashboard({ session }: { session: DashboardSession }) {
     <div className="min-h-screen bg-slate-100 text-slate-900 pb-12 font-sans">
       <header className="bg-white border-b-2 border-slate-200 p-4 sticky top-0 z-30 shadow-sm">
         <div className="max-w-7xl mx-auto">
-          <h1 className="text-2xl font-black text-blue-700 italic tracking-tighter">CRM PRO - Accueil</h1>
+          <h1 className="text-2xl font-black text-blue-700 italic tracking-tighter">CRM DS - Accueil</h1>
         </div>
       </header>
 
@@ -442,16 +447,16 @@ export default function Dashboard({ session }: { session: DashboardSession }) {
                       <p className="mt-2 text-2xl font-black text-slate-900">{analytics.totalLeads}</p>
                     </div>
                     <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-                      <p className="text-[10px] font-black uppercase text-emerald-700">Taux conversion</p>
+                      <p className="text-[10px] font-black uppercase text-emerald-700">Taux Demo - POC</p>
                       <p className="mt-2 text-2xl font-black text-emerald-800">{analytics.conversionRate}%</p>
                     </div>
                     <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
-                      <p className="text-[10px] font-black uppercase text-blue-700">CA pipeline</p>
+                      <p className="text-[10px] font-black uppercase text-blue-700">Valeur du pipeline</p>
                       <p className="mt-2 text-2xl font-black text-blue-800">{totalValue.toLocaleString()} €</p>
                     </div>
                     <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-                      <p className="text-[10px] font-black uppercase text-amber-700">Tâches en retard</p>
-                      <p className="mt-2 text-2xl font-black text-amber-800">{analytics.overdueTasksCount}</p>
+                      <p className="text-[10px] font-black uppercase text-amber-700">Nombre de licences prévues</p>
+                      <p className="mt-2 text-2xl font-black text-amber-800">{analytics.totalLeads}</p>
                     </div>
                   </div>
 
@@ -497,7 +502,7 @@ export default function Dashboard({ session }: { session: DashboardSession }) {
                         </div>
                       </div>
                       <div className="mt-3 text-[11px] font-bold text-slate-500">
-                        Leads créés ({analyticsRangeLabel}): {analytics.leadsCreatedInPeriod} • Taux perte: {analytics.lostRate}% • Communications: {analytics.commsInPeriodCount}
+                        Leads crees ({analyticsRangeLabel}): {analytics.leadsCreatedInPeriod} • Demo: {analytics.leadsDemo} • POC: {analytics.leadsPoc} • Communications: {analytics.commsInPeriodCount}
                       </div>
                     </div>
                   </div>
@@ -676,12 +681,12 @@ export default function Dashboard({ session }: { session: DashboardSession }) {
 
                     <section className="lg:col-span-7 space-y-6">
                       <h2 className="text-2xl font-black text-slate-800 uppercase italic">Pipeline ({totalValue.toLocaleString()} €)</h2>
-                      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                        {['nouveau', 'en cours', 'converti', 'perdu'].map((st) => (
-                          <div key={st} className="bg-slate-200/40 p-3 rounded-[1.5rem] border border-slate-200/50">
-                            <h3 className="font-black text-slate-400 uppercase text-[8px] mb-4 text-center tracking-widest">{st}</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                        {PIPELINE_STAGES.map((stage) => (
+                          <div key={stage.id} className="bg-slate-200/40 p-3 rounded-[1.5rem] border border-slate-200/50">
+                            <h3 className="font-black text-slate-400 uppercase text-[8px] mb-4 text-center tracking-widest">{stage.label}</h3>
                             <div className="space-y-3">
-                              {leads.filter((l) => l.status === st).map((le) => (
+                              {leads.filter((l) => normalizeLeadStatus(l.status) === stage.id).map((le) => (
                                 <div key={le.id} className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
                                   <p className="text-[12px] font-black text-slate-900">{Number(le.estimated_value).toLocaleString()} €</p>
                                 </div>

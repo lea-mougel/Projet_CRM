@@ -58,8 +58,8 @@ export class CommunicationsService {
       }
       return {
         enabled: true,
-        subject: 'Votre dossier est en cours de traitement',
-        body: '<p>Bonjour,</p><p>Votre dossier <strong>{{lead_title}}</strong> est désormais en cours de traitement.</p><p>Notre équipe revient vers vous rapidement.</p>',
+        subject: 'Votre acces d\'essai 3DEXPERIENCE est active',
+        body: '<p>Bonjour {{contact_first_name}},</p><p>Merci d\'avoir telecharge la version d\'essai de notre solution 3DEXPERIENCE.</p><p>Votre acces est maintenant actif.</p><p>Demarrer votre essai: <a href="{{trial_link}}">{{trial_link}}</a></p><p>Si vous le souhaitez, nous pouvons planifier une demonstration ciblee de 20 minutes adaptee a vos enjeux.</p><p>Cordialement,<br/>L\'equipe CRM / Sales Engineering</p>',
         cooldown_hours: 24,
         daily_limit_per_recipient: 2,
         target: 'contact',
@@ -79,10 +79,10 @@ export class CommunicationsService {
     return {
       enabled: byKey[this.settingsKeys.enabled]?.value_bool ?? true,
       subject:
-        byKey[this.settingsKeys.subject]?.value_text || 'Votre dossier est en cours de traitement',
+        byKey[this.settingsKeys.subject]?.value_text || 'Votre acces d\'essai 3DEXPERIENCE est active',
       body:
         byKey[this.settingsKeys.body]?.value_text ||
-        '<p>Bonjour,</p><p>Votre dossier <strong>{{lead_title}}</strong> est désormais en cours de traitement.</p><p>Notre équipe revient vers vous rapidement.</p>',
+        '<p>Bonjour {{contact_first_name}},</p><p>Merci d\'avoir telecharge la version d\'essai de notre solution 3DEXPERIENCE.</p><p>Votre acces est maintenant actif.</p><p>Demarrer votre essai: <a href="{{trial_link}}">{{trial_link}}</a></p><p>Si vous le souhaitez, nous pouvons planifier une demonstration ciblee de 20 minutes adaptee a vos enjeux.</p><p>Cordialement,<br/>L\'equipe CRM / Sales Engineering</p>',
       cooldown_hours: Number.isNaN(cooldown) ? 24 : Math.max(0, cooldown),
       daily_limit_per_recipient: Number.isNaN(dailyLimit) ? 2 : Math.max(1, dailyLimit),
       target,

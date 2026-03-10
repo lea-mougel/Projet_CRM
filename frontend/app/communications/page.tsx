@@ -43,8 +43,8 @@ export default function CommunicationsPage() {
   const [sendSubject, setSendSubject] = useState('');
   const [sendBody, setSendBody] = useState('');
   const [automationEnabled, setAutomationEnabled] = useState<boolean>(true);
-  const [automationSubject, setAutomationSubject] = useState<string>('Votre dossier est en cours de traitement');
-  const [automationBody, setAutomationBody] = useState<string>('<p>Bonjour,</p><p>Votre dossier <strong>{{lead_title}}</strong> est désormais en cours de traitement.</p><p>Notre équipe revient vers vous rapidement.</p>');
+  const [automationSubject, setAutomationSubject] = useState<string>('Votre acces d\'essai 3DEXPERIENCE est active');
+  const [automationBody, setAutomationBody] = useState<string>('<p>Bonjour {{contact_first_name}},</p><p>Merci d\'avoir telecharge la version d\'essai de notre solution 3DEXPERIENCE.</p><p>Votre acces est maintenant actif.</p><p>Demarrer votre essai: <a href="{{trial_link}}">{{trial_link}}</a></p><p>Si vous le souhaitez, nous pouvons planifier une demonstration ciblee de 20 minutes adaptee a vos enjeux.</p><p>Cordialement,<br/>L\'equipe CRM / Sales Engineering</p>');
   const [automationCooldownHours, setAutomationCooldownHours] = useState<number>(24);
   const [automationDailyLimit, setAutomationDailyLimit] = useState<number>(2);
   const [automationTarget, setAutomationTarget] = useState<'contact' | 'commercial'>('contact');
@@ -422,7 +422,7 @@ export default function CommunicationsPage() {
                 value={automationSubject}
                 onChange={(e) => setAutomationSubject(e.target.value)}
                 className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-semibold"
-                placeholder="Votre dossier est en cours de traitement"
+                placeholder="Votre acces d'essai 3DEXPERIENCE est active"
               />
             </div>
             <div className="mb-3">

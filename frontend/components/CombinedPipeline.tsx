@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Sparkles, Settings2, CheckCircle2, XCircle, Columns3, Table2 } from 'lucide-react';
 import { Lead } from '../api/contacts.api';
+import { PIPELINE_STAGES, normalizeLeadStatus, isOpenStage, isWonStage } from '../lib/salesPipeline';
 
 interface CombinedPipelineProps {
   leads: Lead[];
@@ -10,18 +11,27 @@ interface CombinedPipelineProps {
 
 export default function CombinedPipeline({ leads }: CombinedPipelineProps) {
   const [viewMode, setViewMode] = useState<'columns' | 'table'>('columns');
-  const statuses = [
-    { id: 'nouveau', label: 'Nouveau', icon: Sparkles, color: '#3b82f6' },
-    { id: 'en cours', label: 'En Cours', icon: Settings2, color: '#eab308' },
-    { id: 'converti', label: 'Converti', icon: CheckCircle2, color: '#22c55e' },
-    { id: 'perdu', label: 'Perdu', icon: XCircle, color: '#ef4444' },
-  ];
+  const statuses = PIPELINE_STAGES.map((stage) => ({
+    id: stage.id,
+    label: stage.label,
+    icon:
+      stage.id === 'Nouveau Lead'
+        ? Sparkles
+        : stage.id === 'Decouverte des besoins (Audit)'
+          ? Settings2
+          : stage.id === 'Gagne'
+            ? CheckCircle2
+            : stage.id === 'Perdu'
+              ? XCircle
+              : Settings2,
+    color: stage.colorHex,
+  }));
 
   // Calculer les stats par étape
   const stats = statuses.map((status) => {
-    const count = leads.filter((l) => l.status === status.id).length;
+    const count = leads.filter((l) => normalizeLeadStatus(l.status) === status.id).length;
     const value = leads
-      .filter((l) => l.status === status.id)
+      .filter((l) => normalizeLeadStatus(l.status) === status.id)
       .reduce((acc, curr) => acc + (Number(curr.estimated_value) || 0), 0);
     return {
       ...status,
@@ -197,29 +207,32 @@ export default function CombinedPipeline({ leads }: CombinedPipelineProps) {
       {/* KPIs clés */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-8 border-t">
         <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
-          <p className="text-sm text-slate-600 mb-2">Taux de conversion global</p>
+          <p className="text-sm text-slate-600 mb-2">Nombre de licences prevues</p>
           <p className="text-3xl font-bold text-blue-600">
-            {stats[0].count > 0 ? ((stats[3].count / stats[0].count) * 100).toFixed(1) : '0'}%
+            {stats.find((s) => s.id === 'Nouveau Lead')?.count ?? 0}
           </p>
-          <p className="text-xs text-slate-600 mt-2">
-            {stats[3].count} conv. sur {stats[0].count} prospects
-          </p>
+          <p className="text-xs text-slate-600 mt-2">Prospects en debut de pipeline</p>
         </div>
 
         <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
-          <p className="text-sm text-slate-600 mb-2">Valeur gagnée</p>
+          <p className="text-sm text-slate-600 mb-2">Taux transformation Demo - POC</p>
           <p className="text-3xl font-bold text-green-600">
-            {stats[2].value.toLocaleString()} €
+            {(() => {
+              const demo = stats.find((s) => s.id === 'Demonstration 3DEXPERIENCE')?.count ?? 0;
+              const poc = stats.find((s) => s.id === 'POC (Proof of Concept)')?.count ?? 0;
+              if (demo === 0) return '0%';
+              return `${((poc / demo) * 100).toFixed(1)}%`;
+            })()}
           </p>
-          <p className="text-xs text-slate-600 mt-2">Leads convertis ({stats[2].count})</p>
+          <p className="text-xs text-slate-600 mt-2">Indicateur cle phase technique</p>
         </div>
 
         <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-xl p-6 border border-yellow-200">
-          <p className="text-sm text-slate-600 mb-2">Valeur en jeu</p>
+          <p className="text-sm text-slate-600 mb-2">Valeur du pipeline</p>
           <p className="text-3xl font-bold text-yellow-600">
-            {(stats[0].value + stats[1].value).toLocaleString()} €
+            {leads.reduce((acc, curr) => acc + (Number(curr.estimated_value) || 0), 0).toLocaleString()} €
           </p>
-          <p className="text-xs text-slate-600 mt-2">Nouveau + En cours</p>
+          <p className="text-xs text-slate-600 mt-2">Total des opportunites</p>
         </div>
       </div>
     </div>

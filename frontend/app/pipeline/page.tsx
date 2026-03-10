@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
-import { BarChart3, UserRound, LineChart, Lightbulb } from 'lucide-react';
+import { BarChart3, LineChart, Lightbulb } from 'lucide-react';
 import { contactsApi, Lead } from '../../api/contacts.api';
 import CombinedPipeline from '../../components/CombinedPipeline';
 import PipelineInsights from '../../components/PipelineInsights';
@@ -44,7 +44,6 @@ export default function PipelinePage() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
-  const [showMyPipeline, setShowMyPipeline] = useState(false);
   const [activeTab, setActiveTab] = useState<'pipeline' | 'insights'>('pipeline');
 
   const supabase = useMemo(
@@ -122,11 +121,11 @@ export default function PipelinePage() {
   const filteredLeads = useMemo(() => {
     if (!currentUser) return leads;
     if (currentUser.role === 'admin') {
-      return showMyPipeline ? leads.filter((l) => l.assigned_to === currentUser.id) : leads;
+      return leads;
     }
     // Pour les commerciaux, toujours afficher leur pipeline
     return leads.filter((l) => l.assigned_to === currentUser.id);
-  }, [leads, currentUser, showMyPipeline]);
+  }, [leads, currentUser]);
 
   if (loading) {
     return <div className="p-10 text-center text-slate-500">Chargement...</div>;
@@ -148,33 +147,6 @@ export default function PipelinePage() {
 
       {/* Contenu */}
       <div className="max-w-7xl mx-auto px-6 py-8">
-        {/* Switch Ma Pipeline / Pipeline Globale (pour commerciaux) */}
-        {currentUser?.role === 'commercial' && (
-          <div className="mb-6 flex items-center gap-4 bg-white rounded-lg p-4 shadow-sm">
-            <span className="font-semibold text-slate-700">Vue:</span>
-            <button
-              onClick={() => setShowMyPipeline(true)}
-              className={`px-4 py-2 rounded-lg font-semibold transition-all ${
-                showMyPipeline
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
-              }`}
-            >
-              <span className="inline-flex items-center gap-2"><UserRound className="w-4 h-4" />Ma Pipeline</span>
-            </button>
-            <button
-              onClick={() => setShowMyPipeline(false)}
-              className={`px-4 py-2 rounded-lg font-semibold transition-all ${
-                !showMyPipeline
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
-              }`}
-            >
-              <span className="inline-flex items-center gap-2"><BarChart3 className="w-4 h-4" />Pipeline Globale</span>
-            </button>
-          </div>
-        )}
-
         {/* Onglets */}
         <div className="flex gap-4 mb-8 border-b border-slate-200 overflow-x-auto">
           <button

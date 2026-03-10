@@ -7,6 +7,8 @@ type ContactFormProps = {
   onCancel?: () => void;
 };
 
+const CLIENT_TYPES = ['Ingenieur d\'etudes', 'Responsable Innovation', 'Directeur de Production'] as const;
+
 const ContactForm = ({ onSaved, contactToEdit = null, onCancel }: ContactFormProps) => {
   const [form, setForm] = useState<ContactPayload>({
     first_name: contactToEdit?.first_name ?? '',
@@ -16,6 +18,7 @@ const ContactForm = ({ onSaved, contactToEdit = null, onCancel }: ContactFormPro
     company_id: contactToEdit?.company_id ?? null,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [clientType, setClientType] = useState<string>('');
   const [companies, setCompanies] = useState<CompanyListItem[]>([]);
   const [showCreateCompany, setShowCreateCompany] = useState(false);
   const [newCompanyForm, setNewCompanyForm] = useState<CompanyPayload>({
@@ -44,7 +47,10 @@ const ContactForm = ({ onSaved, contactToEdit = null, onCancel }: ContactFormPro
       if (contactToEdit?.id) {
         await contactsApi.update(contactToEdit.id, form);
       } else {
-        await contactsApi.create(form);
+        const created = await contactsApi.create(form);
+        if (clientType) {
+          await contactsApi.createContactNote(created.id, `Type de client: ${clientType}`, 'note');
+        }
       }
       onSaved();
     } finally {
@@ -104,6 +110,16 @@ const ContactForm = ({ onSaved, contactToEdit = null, onCancel }: ContactFormPro
           value={form.phone ?? ''}
           onChange={(e) => setForm({ ...form, phone: e.target.value })}
         />
+        <select
+          className="p-2 border rounded"
+          value={clientType}
+          onChange={(e) => setClientType(e.target.value)}
+        >
+          <option value="">Type de client (optionnel)</option>
+          {CLIENT_TYPES.map((type) => (
+            <option key={type} value={type}>{type}</option>
+          ))}
+        </select>
         <div className="col-span-2">
           <div className="flex gap-2 items-end">
             <div className="flex-1">

@@ -9,8 +9,8 @@ export class LeadsController {
   constructor(private readonly leadsService: LeadsService) {}
 
   @Get()
-  findAll() {
-    return this.leadsService.findAll();
+  findAll(@Req() req: AuthRequest) {
+    return this.leadsService.findAll(req.user);
   }
 
   @Get(':id')
