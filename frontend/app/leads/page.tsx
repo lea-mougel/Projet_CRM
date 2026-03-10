@@ -3,25 +3,25 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
+import { Pencil, Trash2 } from 'lucide-react';
+import { contactsApi, Lead } from '../../api/contacts.api';
 
 type CurrentUser = {
   id: string;
   role: string;
 };
 
-type Lead = {
+type Company = {
   id: string;
-  title: string;
-  amount: number;
-  status: 'nouveau' | 'en_cours' | 'gagné' | 'perdu';
-  source?: string;
-  contact_id?: string;
-  description?: string;
-  estimated_value?: number;
-  contacts?: {
-    first_name?: string;
-    last_name?: string;
-  };
+  name: string;
+};
+
+type Contact = {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  company_id?: string | null;
 };
 
 export default function LeadsPage() {
@@ -31,6 +31,21 @@ export default function LeadsPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [filterStatus, setFilterStatus] = useState<string | null>(null);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [isEditingLead, setIsEditingLead] = useState(false);
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [filteredContacts, setFilteredContacts] = useState<Contact[]>([]);
+  const [editForm, setEditForm] = useState<any>({});
+  const [createForm, setCreateForm] = useState({
+    title: '',
+    estimated_value: '',
+    status: 'nouveau',
+    company_id: '',
+    contact_id: '',
+    source: '',
+    description: '',
+  });
 
   const supabase = useMemo(
     () =>
@@ -45,16 +60,103 @@ export default function LeadsPage() {
   );
 
   const loadLeads = useCallback(async () => {
-    const headers: Record<string, string> = {};
-    if (currentUser?.id) {
-      headers['X-User-Id'] = currentUser.id;
-    }
-    const response = await fetch('http://localhost:3000/leads', { headers });
-    if (response.ok) {
-      const data = await response.json();
+    try {
+      const data = await contactsApi.getAllLeads();
       setLeads(data);
+    } catch (error) {
+      console.error('Erreur chargement leads:', error);
     }
-  }, [currentUser]);
+  }, []);
+
+  const loadCompanies = useCallback(async () => {
+    try {
+      const data = await contactsApi.getCompanies();
+      setCompanies(data);
+    } catch (error) {
+      console.error('Erreur chargement entreprises:', error);
+    }
+  }, []);
+
+  const loadContacts = useCallback(async () => {
+    try {
+      const data = await contactsApi.getAll('', true);
+      setContacts(data);
+    } catch (error) {
+      console.error('Erreur chargement contacts:', error);
+    }
+  }, []);
+
+  const handleCreateLead = async () => {
+    if (!createForm.title) {
+      alert('Veuillez remplir le titre du lead');
+      return;
+    }
+    try {
+      await contactsApi.createLead({
+        title: createForm.title,
+        estimated_value: createForm.estimated_value ? Number(createForm.estimated_value) : undefined,
+        status: createForm.status as any,
+        company_id: createForm.company_id || undefined,
+        contact_id: createForm.contact_id || undefined,
+        source: createForm.source || undefined,
+        description: createForm.description || undefined,
+      });
+      setCreateForm({
+        title: '',
+        estimated_value: '',
+        status: 'nouveau',
+        company_id: '',
+        contact_id: '',
+        source: '',
+        description: '',
+      });
+      setShowCreateForm(false);
+      await loadLeads();
+    } catch (error) {
+      console.error('Erreur création lead:', error);
+      alert('Erreur lors de la création du lead');
+    }
+  };
+
+  const handleSaveLead = async () => {
+    if (!selectedLead) return;
+    try {
+      await contactsApi.updateLead(selectedLead.id, editForm);
+      const updated = await contactsApi.getLeadById(selectedLead.id);
+      setSelectedLead(updated);
+      setIsEditingLead(false);
+      setEditForm({});
+      await loadLeads();
+    } catch (error) {
+      console.error('Erreur mise à jour lead:', error);
+      alert('Erreur lors de la mise à jour du lead');
+    }
+  };
+
+  const handleDeleteLead = async () => {
+    if (!selectedLead) return;
+    const confirmed = window.confirm('Supprimer ce lead ?');
+    if (!confirmed) return;
+    try {
+      await contactsApi.deleteLead(selectedLead.id);
+      setSelectedLead(null);
+      await loadLeads();
+    } catch (error) {
+      console.error('Erreur suppression lead:', error);
+      alert('Erreur lors de la suppression du lead');
+    }
+  };
+
+  const handleOpenLead = async (leadId: string) => {
+    try {
+      const lead = await contactsApi.getLeadById(leadId);
+      setSelectedLead(lead);
+      setIsEditingLead(false);
+      setEditForm({});
+    } catch (error) {
+      console.error('Erreur chargement lead:', error);
+    }
+  };
 
   useEffect(() => {
     const init = async () => {
@@ -84,8 +186,50 @@ export default function LeadsPage() {
   useEffect(() => {
     if (!loading) {
       void loadLeads();
+      void loadCompanies();
+      void loadContacts();
     }
-  }, [loading, loadLeads]);
+  }, [loading, loadLeads, loadCompanies, loadContacts]);
+
+  // Mettre à jour les contacts filtrés en fonction de l'entreprise sélectionnée
+  useEffect(() => {
+    if (createForm.company_id) {
+      const filtered = contacts.filter(c => c.company_id === createForm.company_id);
+      setFilteredContacts(filtered);
+    } else {
+      setFilteredContacts(contacts);
+    }
+  }, [createForm.company_id, contacts]);
+
+  // Quand un contact est sélectionné dans createForm, auto-sélectionner son entreprise
+  useEffect(() => {
+    if (createForm.contact_id) {
+      const selectedContact = contacts.find(c => c.id === createForm.contact_id);
+      if (selectedContact && selectedContact.company_id && selectedContact.company_id !== createForm.company_id) {
+        setCreateForm((prev: any) => ({ ...prev, company_id: selectedContact.company_id || '' }));
+      }
+    }
+  }, [createForm.contact_id, contacts, createForm.company_id]);
+
+  // Quand une entreprise est sélectionnée dans editForm, filtrer les contacts
+  useEffect(() => {
+    if (isEditingLead && editForm.company_id) {
+      const filtered = contacts.filter(c => c.company_id === editForm.company_id);
+      setFilteredContacts(filtered);
+    } else if (isEditingLead) {
+      setFilteredContacts(contacts);
+    }
+  }, [editForm.company_id, contacts, isEditingLead]);
+
+  // Quand un contact est sélectionné dans editForm, auto-sélectionner son entreprise
+  useEffect(() => {
+    if (isEditingLead && editForm.contact_id) {
+      const selectedContact = contacts.find(c => c.id === editForm.contact_id);
+      if (selectedContact && selectedContact.company_id && selectedContact.company_id !== editForm.company_id) {
+        setEditForm((prev: any) => ({ ...prev, company_id: selectedContact.company_id || '' }));
+      }
+    }
+  }, [editForm.contact_id, contacts, editForm.company_id, isEditingLead]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -95,13 +239,13 @@ export default function LeadsPage() {
 
   const statuses = [
     { id: 'nouveau', label: 'Nouveau', color: 'bg-blue-500' },
-    { id: 'en_cours', label: 'En Cours', color: 'bg-yellow-500' },
-    { id: 'gagné', label: 'Gagné', color: 'bg-green-500' },
+    { id: 'en cours', label: 'En Cours', color: 'bg-yellow-500' },
+    { id: 'converti', label: 'Converti', color: 'bg-green-500' },
     { id: 'perdu', label: 'Perdu', color: 'bg-red-500' }
   ];
 
   const filteredLeads = filterStatus ? leads.filter(l => l.status === filterStatus) : leads;
-  const totalValue = leads.reduce((acc, curr) => acc + (Number(curr.amount || curr.estimated_value) || 0), 0);
+  const totalValue = leads.reduce((acc, curr) => acc + (Number(curr.estimated_value) || 0), 0);
 
   if (loading) {
     return <div className="p-10 text-center text-slate-500">Chargement des leads...</div>;
@@ -130,6 +274,23 @@ export default function LeadsPage() {
               <h2 className="text-2xl font-bold text-slate-800 mb-2">Pipeline de Vente</h2>
               <p className="text-slate-500 font-semibold">Valeur totale: {totalValue.toLocaleString()} €</p>
             </div>
+            <button
+              onClick={() => {
+                setShowCreateForm(true);
+                setCreateForm({
+                  title: '',
+                  estimated_value: '',
+                  status: 'nouveau',
+                  company_id: '',
+                  contact_id: '',
+                  source: '',
+                  description: '',
+                });
+              }}
+              className="px-4 py-2 bg-blue-600 text-white rounded font-bold hover:bg-blue-700"
+            >
+              + Nouveau Lead
+            </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
@@ -170,11 +331,11 @@ export default function LeadsPage() {
                     {lead.source && <p className="text-xs text-slate-400 mt-1">Source: {lead.source}</p>}
                   </div>
                   <div className="text-right">
-                    <p className="font-bold text-blue-700">{(lead.amount || lead.estimated_value || 0).toLocaleString()} €</p>
+                    <p className="font-bold text-blue-700">{(lead.estimated_value || 0).toLocaleString()} €</p>
                     <span className={`inline-block mt-2 px-2 py-1 rounded text-[10px] font-bold text-white ${
                       lead.status === 'nouveau' ? 'bg-blue-500' :
-                      lead.status === 'en_cours' ? 'bg-yellow-500' :
-                      lead.status === 'gagné' ? 'bg-green-500' :
+                      lead.status === 'en cours' ? 'bg-yellow-500' :
+                      lead.status === 'converti' ? 'bg-green-500' :
                       'bg-red-500'
                     }`}>
                       {lead.status}
@@ -192,6 +353,94 @@ export default function LeadsPage() {
         </div>
       </div>
 
+      {/*Modale création lead */}
+      {showCreateForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl p-8">
+            <h2 className="text-2xl font-bold mb-6">Créer un nouveau lead</h2>
+            <div className="space-y-4">
+              <input
+                type="text"
+                placeholder="Titre du lead"
+                value={createForm.title}
+                onChange={(e) => setCreateForm({ ...createForm, title: e.target.value })}
+                className="w-full border border-slate-300 p-2 rounded"
+              />
+              <input
+                type="number"
+                placeholder="Valeur estimée"
+                value={createForm.estimated_value}
+                onChange={(e) => setCreateForm({ ...createForm, estimated_value: e.target.value })}
+                className="w-full border border-slate-300 p-2 rounded"
+              />
+              <select
+                value={createForm.status}
+                onChange={(e) => setCreateForm({ ...createForm, status: e.target.value })}
+                className="w-full border border-slate-300 p-2 rounded bg-white"
+              >
+                <option value="nouveau">Nouveau</option>
+                <option value="en cours">En Cours</option>
+                <option value="converti">Converti</option>
+                <option value="perdu">Perdu</option>
+              </select>
+              <select
+                value={createForm.company_id}
+                onChange={(e) => setCreateForm({ ...createForm, company_id: e.target.value })}
+                className="w-full border border-slate-300 p-2 rounded bg-white"
+              >
+                <option value="">Sélectionner une entreprise</option>
+                {companies.map((company) => (
+                  <option key={company.id} value={company.id}>
+                    {company.name}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={createForm.contact_id}
+                onChange={(e) => setCreateForm({ ...createForm, contact_id: e.target.value })}
+                className="w-full border border-slate-300 p-2 rounded bg-white"
+              >
+                <option value="">Sélectionner un contact</option>
+                {filteredContacts.map((contact) => (
+                  <option key={contact.id} value={contact.id}>
+                    {contact.first_name} {contact.last_name}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="text"
+                placeholder="Source"
+                value={createForm.source}
+                onChange={(e) => setCreateForm({ ...createForm, source: e.target.value })}
+                className="w-full border border-slate-300 p-2 rounded"
+              />
+              <textarea
+                placeholder="Description"
+                value={createForm.description}
+                onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
+                className="w-full border border-slate-300 p-2 rounded"
+                rows={3}
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={() => void handleCreateLead()}
+                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded font-bold hover:bg-green-700"
+                >
+                  Créer
+                </button>
+                <button
+                  onClick={() => setShowCreateForm(false)}
+                  className="flex-1 px-4 py-2 bg-gray-400 text-white rounded font-bold hover:bg-gray-500"
+                >
+                  Annuler
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/*Modale détail lead */}
       {selectedLead && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-2xl max-h-[85vh] overflow-y-auto bg-white rounded-2xl shadow-2xl p-8">
@@ -205,45 +454,164 @@ export default function LeadsPage() {
               </button>
             </div>
 
-            <div className="space-y-4">
-              <div>
-                <span className="font-semibold text-slate-700">Valeur:</span>
-                <p className="text-blue-700 font-bold text-lg">{(selectedLead.amount || selectedLead.estimated_value || 0).toLocaleString()} €</p>
+            {isEditingLead ? (
+              <div className="space-y-4 mb-6 bg-slate-50 p-4 rounded">
+                <input
+                  type="text"
+                  placeholder="Titre"
+                  value={editForm.title ?? selectedLead.title}
+                  onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                  className="w-full border border-slate-300 p-2 rounded"
+                />
+                <input
+                  type="number"
+                  placeholder="Valeur estimée"
+                  value={editForm.estimated_value ?? selectedLead.estimated_value ?? ''}
+                  onChange={(e) => setEditForm({ ...editForm, estimated_value: Number(e.target.value) })}
+                  className="w-full border border-slate-300 p-2 rounded"
+                />
+                <select
+                  value={editForm.status ?? selectedLead.status}
+                  onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
+                  className="w-full border border-slate-300 p-2 rounded bg-white"
+                >
+                  <option value="nouveau">Nouveau</option>
+                  <option value="en cours">En Cours</option>
+                  <option value="converti">Converti</option>
+                  <option value="perdu">Perdu</option>
+                </select>
+                <select
+                  value={editForm.company_id ?? selectedLead.company_id ?? ''}
+                  onChange={(e) => setEditForm({ ...editForm, company_id: e.target.value })}
+                  className="w-full border border-slate-300 p-2 rounded bg-white"
+                >
+                  <option value="">Aucune entreprise</option>
+                  {companies.map((company) => (
+                    <option key={company.id} value={company.id}>
+                      {company.name}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={editForm.contact_id ?? selectedLead.contact_id ?? ''}
+                  onChange={(e) => setEditForm({ ...editForm, contact_id: e.target.value })}
+                  className="w-full border border-slate-300 p-2 rounded bg-white"
+                >
+                  <option value="">Aucun contact</option>
+                  {filteredContacts.map((contact) => (
+                    <option key={contact.id} value={contact.id}>
+                      {contact.first_name} {contact.last_name}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="text"
+                  placeholder="Source"
+                  value={editForm.source ?? selectedLead.source ?? ''}
+                  onChange={(e) => setEditForm({ ...editForm, source: e.target.value })}
+                  className="w-full border border-slate-300 p-2 rounded"
+                />
+                <textarea
+                  placeholder="Description"
+                  value={editForm.description ?? selectedLead.description ?? ''}
+                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                  className="w-full border border-slate-300 p-2 rounded"
+                  rows={3}
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => void handleSaveLead()}
+                    className="flex-1 px-4 py-2 bg-green-600 text-white rounded font-bold hover:bg-green-700"
+                  >
+                    Enregistrer
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsEditingLead(false);
+                      setEditForm({});
+                    }}
+                    className="flex-1 px-4 py-2 bg-gray-400 text-white rounded font-bold hover:bg-gray-500"
+                  >
+                    Annuler
+                  </button>
+                </div>
               </div>
+            ) : (
+              <>
+                <div className="space-y-4 mb-6">
+                  <div>
+                    <span className="font-semibold text-slate-700">Valeur:</span>
+                    <p className="text-blue-700 font-bold text-lg">{(selectedLead.estimated_value || 0).toLocaleString()} €</p>
+                  </div>
 
-              <div>
-                <span className="font-semibold text-slate-700">Statut:</span>
-                <span className={`inline-block ml-2 px-3 py-1 rounded-lg text-white font-bold text-sm ${
-                  selectedLead.status === 'nouveau' ? 'bg-blue-500' :
-                  selectedLead.status === 'en_cours' ? 'bg-yellow-500' :
-                  selectedLead.status === 'gagné' ? 'bg-green-500' :
-                  'bg-red-500'
-                }`}>
-                  {selectedLead.status}
-                </span>
-              </div>
+                  <div>
+                    <span className="font-semibold text-slate-700">Statut:</span>
+                    <p>
+                      <span className="inline-block px-3 py-1 rounded-full text-white text-sm font-semibold"
+                        style={{
+                          backgroundColor:
+                            selectedLead.status === 'nouveau' ? '#3b82f6' :
+                            selectedLead.status === 'en cours' ? '#eab308' :
+                            selectedLead.status === 'converti' ? '#22c55e' : '#ef4444'
+                        }}
+                      >
+                        {statuses.find(s => s.id === selectedLead.status)?.label}
+                      </span>
+                    </p>
+                  </div>
 
-              {selectedLead.source && (
-                <div>
-                  <span className="font-semibold text-slate-700">Source:</span>
-                  <p>{selectedLead.source}</p>
+                  {selectedLead.companies && (
+                    <div>
+                      <span className="font-semibold text-slate-700">Entreprise:</span>
+                      <p>{selectedLead.companies.name}</p>
+                    </div>
+                  )}
+
+                  {selectedLead.source && (
+                    <div>
+                      <span className="font-semibold text-slate-700">Source:</span>
+                      <p>{selectedLead.source}</p>
+                    </div>
+                  )}
+
+                  {selectedLead.contacts && (
+                    <div>
+                      <span className="font-semibold text-slate-700">Contact:</span>
+                      <p>{selectedLead.contacts.first_name} {selectedLead.contacts.last_name}</p>
+                    </div>
+                  )}
+
+                  {selectedLead.assigned_commercial && (
+                    <div>
+                      <span className="font-semibold text-slate-700">Commercial assigné:</span>
+                      <p>{selectedLead.assigned_commercial.email || 'Non assigné'}</p>
+                    </div>
+                  )}
+
+                  {selectedLead.description && (
+                    <div>
+                      <span className="font-semibold text-slate-700">Description:</span>
+                      <p className="mt-1 text-slate-600">{selectedLead.description}</p>
+                    </div>
+                  )}
                 </div>
-              )}
 
-              {selectedLead.contacts && (
-                <div>
-                  <span className="font-semibold text-slate-700">Contact:</span>
-                  <p>{selectedLead.contacts.first_name} {selectedLead.contacts.last_name}</p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setIsEditingLead(true)}
+                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded font-bold hover:bg-blue-700"
+                  >
+                    <span className="inline-flex items-center gap-2"><Pencil className="w-4 h-4" />Modifier</span>
+                  </button>
+                  <button
+                    onClick={() => void handleDeleteLead()}
+                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded font-bold hover:bg-red-700"
+                  >
+                    <span className="inline-flex items-center gap-2"><Trash2 className="w-4 h-4" />Supprimer</span>
+                  </button>
                 </div>
-              )}
-
-              {selectedLead.description && (
-                <div>
-                  <span className="font-semibold text-slate-700">Description:</span>
-                  <p className="mt-1 text-slate-600">{selectedLead.description}</p>
-                </div>
-              )}
-            </div>
+              </>
+            )}
           </div>
         </div>
       )}

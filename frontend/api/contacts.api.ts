@@ -78,6 +78,43 @@ export type CompanyPayload = {
   town?: string;
 };
 
+export type Lead = {
+  id: string;
+  title: string;
+  estimated_value?: number;
+  status: 'nouveau' | 'en cours' | 'converti' | 'perdu';
+  company_id?: string | null;
+  contact_id?: string | null;
+  source?: string | null;
+  description?: string | null;
+  assigned_to?: string | null;
+  contacts?: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+  } | null;
+  companies?: {
+    id: string;
+    name: string;
+    industry?: string;
+  } | null;
+  assigned_commercial?: {
+    id?: string;
+    email?: string;
+  } | null;
+};
+
+export type CreateLeadPayload = {
+  title: string;
+  estimated_value?: number;
+  status?: 'nouveau' | 'en cours' | 'converti' | 'perdu';
+  company_id?: string | null;
+  contact_id?: string | null;
+  source?: string | null;
+  description?: string | null;
+};
+
 export type ContactNote = {
   id: string;
   contact_id: string;
@@ -88,6 +125,81 @@ export type ContactNote = {
   author?: {
     email?: string;
   };
+};
+
+export type Task = {
+  id: string;
+  title: string;
+  due_date?: string | null;
+  is_completed: boolean;
+  contact_id?: string | null;
+  lead_id?: string | null;
+  user_id?: string | null;
+  contact?: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+  } | null;
+  lead?: {
+    id: string;
+    title: string;
+    status: 'nouveau' | 'en cours' | 'converti' | 'perdu';
+  } | null;
+};
+
+export type TaskPayload = {
+  title: string;
+  due_date?: string;
+  contact_id?: string;
+  lead_id?: string;
+};
+
+export type Communication = {
+  id: string;
+  recipient_email: string;
+  subject: string;
+  body?: string | null;
+  status: 'pending' | 'sent' | 'failed';
+  channel: 'email';
+  trigger_type: 'manual' | 'automation';
+  template_key?: string | null;
+  provider_message_id?: string | null;
+  error_message?: string | null;
+  created_at: string;
+  sent_at?: string | null;
+  contact?: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+  } | null;
+  lead?: {
+    id: string;
+    title: string;
+    status: 'nouveau' | 'en cours' | 'converti' | 'perdu';
+  } | null;
+};
+
+export type AutomationSettings = {
+  enabled: boolean;
+  subject: string;
+  body: string;
+  cooldown_hours: number;
+  daily_limit_per_recipient: number;
+  target: 'contact' | 'commercial';
+  target_commercial_id: string | null;
+  target_lead_id: string | null;
+};
+
+export type SendCommunicationPayload = {
+  recipient_email: string;
+  subject: string;
+  body?: string;
+  contact_id?: string;
+  lead_id?: string;
+  template_key?: string;
+  trigger_type?: 'manual' | 'automation';
 };
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
@@ -253,5 +365,151 @@ export const contactsApi = {
     });
 
     return parseResponse<Contact[]>(response);
+  },
+
+  async getAllLeads(): Promise<Lead[]> {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/leads`, {
+      method: 'GET',
+      headers,
+    });
+
+    return parseResponse<Lead[]>(response);
+  },
+
+  async getLeadById(id: string): Promise<Lead> {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/leads/${id}`, {
+      method: 'GET',
+      headers,
+    });
+
+    return parseResponse<Lead>(response);
+  },
+
+  async createLead(payload: CreateLeadPayload): Promise<Lead> {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/leads`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload),
+    });
+
+    return parseResponse<Lead>(response);
+  },
+
+  async updateLead(id: string, payload: Partial<CreateLeadPayload>): Promise<Lead> {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/leads/${id}`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify(payload),
+    });
+
+    return parseResponse<Lead>(response);
+  },
+
+  async deleteLead(id: string): Promise<{ success: boolean }> {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/leads/${id}`, {
+      method: 'DELETE',
+      headers,
+    });
+
+    return parseResponse<{ success: boolean }>(response);
+  },
+
+  async getUserProfile(userId: string): Promise<{ role: string }> {
+    const { data } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', userId)
+      .single();
+    
+    return data || { role: 'user' };
+  },
+
+  async getAllTasks(): Promise<Task[]> {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/tasks`, {
+      method: 'GET',
+      headers,
+    });
+
+    return parseResponse<Task[]>(response);
+  },
+
+  async createTask(payload: TaskPayload): Promise<Task> {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/tasks`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload),
+    });
+
+    return parseResponse<Task>(response);
+  },
+
+  async updateTask(id: string, payload: Partial<TaskPayload> & { is_completed?: boolean }): Promise<Task> {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/tasks/${id}`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify(payload),
+    });
+
+    return parseResponse<Task>(response);
+  },
+
+  async deleteTask(id: string): Promise<{ success: boolean }> {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/tasks/${id}`, {
+      method: 'DELETE',
+      headers,
+    });
+
+    return parseResponse<{ success: boolean }>(response);
+  },
+
+  async getCommunications(): Promise<Communication[]> {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/communications`, {
+      method: 'GET',
+      headers,
+    });
+
+    return parseResponse<Communication[]>(response);
+  },
+
+  async sendCommunication(payload: SendCommunicationPayload): Promise<Communication> {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/communications/send`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload),
+    });
+
+    return parseResponse<Communication>(response);
+  },
+
+  async getAutomationSettings(): Promise<AutomationSettings> {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/communications/automation-settings`, {
+      method: 'GET',
+      headers,
+    });
+
+    return parseResponse<AutomationSettings>(response);
+  },
+
+  async updateAutomationSettings(payload: Partial<AutomationSettings>): Promise<AutomationSettings> {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/communications/automation-settings`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify(payload),
+    });
+
+    return parseResponse<AutomationSettings>(response);
   },
 };

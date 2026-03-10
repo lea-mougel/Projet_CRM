@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
+import { Pencil, Trash2 } from 'lucide-react';
 import { CompanyDetails, CompanyListItem, contactsApi, CompanyPayload } from '../../api/contacts.api';
 
 type CurrentUser = {
@@ -363,13 +364,13 @@ export default function CompaniesPage() {
                     onClick={() => setIsEditing(true)}
                     className="px-4 py-2 bg-blue-600 text-white rounded font-bold hover:bg-blue-700"
                   >
-                    ✏️ Modifier
+                    <span className="inline-flex items-center gap-2"><Pencil className="w-4 h-4" />Modifier</span>
                   </button>
                   <button
                     onClick={handleDeleteCompany}
                     className="px-4 py-2 bg-red-600 text-white rounded font-bold hover:bg-red-700"
                   >
-                    🗑️ Supprimer
+                    <span className="inline-flex items-center gap-2"><Trash2 className="w-4 h-4" />Supprimer</span>
                   </button>
                 </div>
               </>
@@ -381,7 +382,7 @@ export default function CompaniesPage() {
                 <div key={contact.id} className="border border-slate-200 rounded-lg p-3">
                   <div className="font-semibold">{contact.first_name} {contact.last_name}</div>
                   <div className="text-sm text-gray-500">{contact.email}</div>
-                  <div className="text-sm italic">Commercial: {contact.assigned_commercial?.email || 'Non assigné'}</div>
+                  <div className="text-sm italic">Commercial (contact principal): {contact.assigned_commercial?.email || 'Non assigné'}</div>
                 </div>
               ))}
               {selectedCompany.contacts.length === 0 && !showAddContact && (

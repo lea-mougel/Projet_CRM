@@ -2,27 +2,48 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
+import {
+  Home,
+  Users,
+  Building2,
+  BarChart3,
+  CheckSquare,
+  Mail,
+  TrendingUp,
+  Briefcase,
+  LogOut,
+} from 'lucide-react';
+import { contactsApi } from '../api/contacts.api';
 
 type NavItem = {
   href: string;
-  icon: string;
+  icon: 'home' | 'contacts' | 'companies' | 'leads' | 'tasks' | 'communications' | 'pipeline' | 'commercials';
   label: string;
   key: string;
 };
 
-const navItems: NavItem[] = [
-  { href: '/', icon: '🏠', label: 'Accueil', key: 'home' },
-  { href: '/my-contacts', icon: '👤', label: 'Mes contacts', key: 'my-contacts' },
-  { href: '/contacts', icon: '👥', label: 'Contacts', key: 'contacts' },
-  { href: '/companies', icon: '🏢', label: 'Entreprises', key: 'companies' },
-  { href: '/leads', icon: '📊', label: 'Leads', key: 'leads' },
+const baseNavItems: NavItem[] = [
+  { href: '/', icon: 'home', label: 'Accueil', key: 'home' },
+  { href: '/contacts?tab=my', icon: 'contacts', label: 'Contacts', key: 'contacts' },
+  { href: '/companies', icon: 'companies', label: 'Entreprises', key: 'companies' },
+  { href: '/leads', icon: 'leads', label: 'Leads', key: 'leads' },
+  { href: '/tasks', icon: 'tasks', label: 'Tâches', key: 'tasks' },
+  { href: '/communications', icon: 'communications', label: 'Comms', key: 'communications' },
+  { href: '/pipeline', icon: 'pipeline', label: 'Pipeline', key: 'pipeline' },
+];
+
+const adminNavItems: NavItem[] = [
+  { href: '/commercials', icon: 'commercials', label: 'Commerciaux', key: 'commercials' },
 ];
 
 export default function SideNavigation() {
   const pathname = usePathname();
   const router = useRouter();
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [loading, setLoading] = useState(true);
+
   const supabase = useMemo(
     () =>
       createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
@@ -35,6 +56,39 @@ export default function SideNavigation() {
     [],
   );
 
+  useEffect(() => {
+    const checkRole = async () => {
+      const { data, error } = await supabase.auth.getSession();
+      if (error || !data?.session) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const profile = await contactsApi.getUserProfile(data.session.user.id);
+        if (profile && profile.role === 'admin') {
+          setIsAdmin(true);
+        }
+      } catch (err) {
+        console.error('Erreur profil:', err);
+      }
+
+      setLoading(false);
+    };
+
+    checkRole();
+  }, [supabase.auth]);
+
+  const navItems = useMemo(() => {
+    let items = [...baseNavItems];
+    // Masquer /leads pour les admins
+    if (isAdmin) {
+      items = items.filter((item) => item.key !== 'leads');
+      items.push(...adminNavItems);
+    }
+    return items;
+  }, [isAdmin]);
+
   const handleLogout = useCallback(async () => {
     await supabase.auth.signOut();
     localStorage.clear();
@@ -42,9 +96,35 @@ export default function SideNavigation() {
   }, [supabase.auth]);
 
   const isActive = (href: string) => {
-    if (href === '/' && pathname === '/') return true;
-    if (href !== '/' && pathname.startsWith(href)) return true;
+    const cleanHref = href.split('?')[0];
+    if (cleanHref === '/' && pathname === '/') return true;
+    if (cleanHref !== '/' && pathname.startsWith(cleanHref)) return true;
     return false;
+  };
+
+  const renderIcon = (icon: NavItem['icon']) => {
+    const className = 'w-6 h-6';
+
+    switch (icon) {
+      case 'home':
+        return <Home className={className} />;
+      case 'contacts':
+        return <Users className={className} />;
+      case 'companies':
+        return <Building2 className={className} />;
+      case 'leads':
+        return <BarChart3 className={className} />;
+      case 'tasks':
+        return <CheckSquare className={className} />;
+      case 'communications':
+        return <Mail className={className} />;
+      case 'pipeline':
+        return <TrendingUp className={className} />;
+      case 'commercials':
+        return <Briefcase className={className} />;
+      default:
+        return <Home className={className} />;
+    }
   };
 
   return (
@@ -71,7 +151,7 @@ export default function SideNavigation() {
                 isActive(item.href) ? 'scale-110' : 'scale-100 group-hover:scale-110'
               }`}
             >
-              {item.icon}
+              {renderIcon(item.icon)}
             </span>
 
             {/* Tooltip/Label on hover */}
@@ -95,7 +175,9 @@ export default function SideNavigation() {
         className="relative group flex items-center justify-center w-12 h-12 rounded-lg transition-all hover:bg-red-50 mb-4"
         title="Déconnexion"
       >
-        <span className="text-2xl transition-all group-hover:scale-110">🚪</span>
+        <span className="text-2xl transition-all group-hover:scale-110">
+          <LogOut className="w-6 h-6" />
+        </span>
 
         {/* Tooltip */}
         <div className="absolute left-full ml-4 px-3 py-2 bg-slate-900 text-white text-sm font-semibold rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">

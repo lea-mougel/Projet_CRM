@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { X, Pencil, Trash2, NotebookPen, Phone, Mail, Handshake } from 'lucide-react';
 import { contactsApi, CompanyDetails, Contact, ContactNote, CompanyListItem } from '../api/contacts.api';
 import ContactForm from './ContactForm';
 
@@ -279,7 +280,7 @@ const ContactList = ({ currentUser, mode = 'all' }: ContactListProps) => {
               }}
               className="px-3 py-2 bg-gray-300 text-black rounded hover:bg-gray-400 font-semibold"
             >
-              ✕ Réinitialiser
+              <span className="inline-flex items-center gap-2"><X className="w-4 h-4" />Réinitialiser</span>
             </button>
           )}
         </div>
@@ -305,7 +306,7 @@ const ContactList = ({ currentUser, mode = 'all' }: ContactListProps) => {
             <tr>
               <th className="p-4">Contact</th>
               <th className="p-4">Entreprise</th>
-              <th className="p-4">Commercial</th>
+              <th className="p-4">Commercial (contact principal)</th>
             </tr>
           </thead>
           <tbody>
@@ -449,7 +450,7 @@ const ContactList = ({ currentUser, mode = 'all' }: ContactListProps) => {
                       <p><span className="font-semibold">Nom :</span> {selectedContact.first_name} {selectedContact.last_name}</p>
                       <p><span className="font-semibold">Email :</span> {selectedContact.email}</p>
                       <p><span className="font-semibold">Téléphone :</span> {selectedContact.phone || 'Non renseigné'}</p>
-                      <p><span className="font-semibold">Commercial :</span> {selectedContact.assigned_commercial?.email || 'Non assigné'}</p>
+                      <p><span className="font-semibold">Commercial (contact principal) :</span> {selectedContact.assigned_commercial?.email || 'Non assigné'}</p>
                       <div className="pt-2">
                         <span className="font-semibold">Entreprise :</span>{' '}
                         {selectedContact.company?.id ? (
@@ -470,13 +471,13 @@ const ContactList = ({ currentUser, mode = 'all' }: ContactListProps) => {
                         onClick={() => setIsEditingContact(true)}
                         className="px-4 py-2 bg-blue-600 text-white rounded font-bold hover:bg-blue-700"
                       >
-                        ✏️ Modifier
+                        <span className="inline-flex items-center gap-2"><Pencil className="w-4 h-4" />Modifier</span>
                       </button>
                       <button
                         onClick={() => void handleDeleteContact()}
                         className="px-4 py-2 bg-red-600 text-white rounded font-bold hover:bg-red-700"
                       >
-                        🗑️ Supprimer
+                        <span className="inline-flex items-center gap-2"><Trash2 className="w-4 h-4" />Supprimer</span>
                       </button>
                     </div>
                   </>
@@ -495,10 +496,10 @@ const ContactList = ({ currentUser, mode = 'all' }: ContactListProps) => {
                     onChange={(e) => setNoteType(e.target.value as 'note' | 'appel' | 'email' | 'réunion')}
                     className="w-full p-2 border rounded mb-2 text-sm"
                   >
-                    <option value="note">📝 Note</option>
-                    <option value="appel">📞 Appel</option>
-                    <option value="email">📧 Email</option>
-                    <option value="réunion">🤝 Réunion</option>
+                    <option value="note">Note</option>
+                    <option value="appel">Appel</option>
+                    <option value="email">Email</option>
+                    <option value="réunion">Réunion</option>
                   </select>
                   <textarea
                     placeholder="Contenu de la note..."
@@ -526,12 +527,12 @@ const ContactList = ({ currentUser, mode = 'all' }: ContactListProps) => {
                     {contactNotes.map((note) => (
                       <div key={note.id} className="border border-slate-200 rounded-lg p-3 bg-white">
                         <div className="flex justify-between items-start mb-1">
-                          <span className="text-sm font-semibold text-slate-700">
-                            {note.type === 'note' && '📝'}
-                            {note.type === 'appel' && '📞'}
-                            {note.type === 'email' && '📧'}
-                            {note.type === 'réunion' && '🤝'}
-                            {' '}{note.type.toUpperCase()}
+                          <span className="text-sm font-semibold text-slate-700 inline-flex items-center gap-2">
+                            {note.type === 'note' && <NotebookPen className="w-4 h-4" />}
+                            {note.type === 'appel' && <Phone className="w-4 h-4" />}
+                            {note.type === 'email' && <Mail className="w-4 h-4" />}
+                            {note.type === 'réunion' && <Handshake className="w-4 h-4" />}
+                            {note.type.toUpperCase()}
                           </span>
                           <span className="text-xs text-slate-500">
                             {new Date(note.created_at).toLocaleDateString('fr-FR')}

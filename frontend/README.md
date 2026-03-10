@@ -1,36 +1,74 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CRM Frontend
 
-## Getting Started
+Frontend de l'application CRM construit avec Next.js (App Router), TypeScript et Tailwind CSS.
 
-First, run the development server:
+## Prérequis
+
+- Node.js 18+
+- npm
+- Variables d'environnement Supabase configurées dans `.env.local`:
+	- `NEXT_PUBLIC_SUPABASE_URL`
+	- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+
+## Lancer le projet
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Application disponible sur `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Scripts utiles
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run dev      # mode développement
+npm run build    # build production + vérification TypeScript
+npm run start    # lancement du build
+```
 
-## Learn More
+## Fonctionnalités implémentées
 
-To learn more about Next.js, take a look at the following resources:
+- Authentification (signup/login/logout) via Supabase Auth
+- Gestion des contacts (CRUD, recherche/filtrage)
+- Gestion des entreprises
+- Gestion des leads (statuts: `nouveau`, `en cours`, `converti`, `perdu`)
+- Pipeline de vente avec visualisation par colonnes / tableau
+- Insights pipeline avec vues adaptées au rôle
+- Module admin de gestion des commerciaux
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Gestion des rôles (frontend)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Commercial
 
-## Deploy on Vercel
+- Accès au pipeline avec switch `Ma Pipeline` / `Pipeline Globale`
+- Onglet insights sans section « performance par commercial »
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Admin
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Onglet latéral `Commerciaux`
+- Liste des commerciaux en tableau avec:
+	- nom/mail
+	- montant en attente
+	- taux de conversion
+	- montant gagné
+- Recherche + tri ascendant/descendant par colonnes
+- Clic sur un commercial pour ouvrir `/commercial/[id]` avec sous-onglets:
+	- `Contacts`
+	- `Pipeline` (même visuel que côté commercial)
+	- `Insights`
+	- `Détails des leads`
+
+## Pages principales
+
+- `/login`, `/signup`
+- `/contacts`, `/companies`, `/leads`
+- `/pipeline`
+- `/commercials` (admin)
+- `/commercial/[id]` (admin)
+
+## Structure utile
+
+- `app/` : pages Next.js
+- `components/` : composants UI métiers
+- `api/contacts.api.ts` : client API frontend
