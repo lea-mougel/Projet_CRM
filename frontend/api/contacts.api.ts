@@ -475,6 +475,8 @@ export const contactsApi = {
   },
 
   async getUserProfile(userId: string): Promise<{ role: string }> {
+    // Ensure the session is restored from storage before querying (client may be uninitialized)
+    await supabase.auth.getSession();
     const { data } = await supabase
       .from('profiles')
       .select('role')

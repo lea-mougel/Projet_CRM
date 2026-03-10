@@ -26,8 +26,10 @@ async function bootstrap() {
 
       const isLocalhost = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
       const isConfigured = configuredOrigins.includes(origin);
+      // Allow Vercel-hosted origins when FRONTEND_URL is not explicitly configured
+      const isVercelFallback = configuredOrigins.length === 0 && /^https:\/\/[a-zA-Z0-9-]+\.vercel\.app$/.test(origin);
 
-      if (isLocalhost || isConfigured) {
+      if (isLocalhost || isConfigured || isVercelFallback) {
         callback(null, true);
         return;
       }

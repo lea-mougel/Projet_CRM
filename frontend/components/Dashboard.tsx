@@ -61,7 +61,7 @@ export default function Dashboard({ session }: { session: DashboardSession }) {
   const supabase = useMemo(() => createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { auth: { persistSession: true, storageKey: 'crm-auth-token' } }
+    { auth: { persistSession: true, autoRefreshToken: true } }
   ), []);
 
   const [role, setRole] = useState<string>('chargement');
