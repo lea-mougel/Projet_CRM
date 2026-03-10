@@ -5,25 +5,44 @@ import { ValidationPipe } from '@nestjs/common';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // 1. Activation du CORS pour permettre au projet Frontend Vercel de contacter ce projet Backend
-  // Dans le cadre du projet : Connexion sécurisée frontend-backend via APIs REST 
+  const configuredOrigins = [
+    process.env.FRONTEND_URL,
+    ...(process.env.FRONTEND_URLS?.split(',') || []),
+  ]
+    .map((origin) => origin?.trim())
+    .filter((origin): origin is string => Boolean(origin));
+
   app.enableCors({
-    origin: process.env.FRONTEND_URL || '*', // Idéalement, mettez l'URL Vercel de votre front ici
+    origin: (origin: string | undefined, callback: (error: Error | null, allow?: boolean) => void) => {
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+
+      const isLocalhost = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+      const isConfigured = configuredOrigins.includes(origin);
+
+      if (isLocalhost || isConfigured) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error(`Origine non autorisee par CORS: ${origin}`), false);
+    },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-User-Id'],
     credentials: true,
   });
 
-  // 2. Validation globale des DTOs (utile pour les modules Leads, Contacts, etc.) [cite: 231]
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true,
     forbidNonWhitelisted: true,
     transform: true,
   }));
 
-  // 3. Utilisation du port dynamique imposé par Vercel ou 3000 par défaut
-  const port = process.env.PORT || 3000;
+  const port = Number(process.env.PORT || 3002);
   await app.listen(port);
-  
+
   console.log(`Application is running on: ${await app.getUrl()}`);
 }
 bootstrap();
