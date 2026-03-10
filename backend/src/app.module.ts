@@ -22,7 +22,7 @@ import { CommunicationsModule } from './communications/communications.module';
   ],
 
   controllers: [AppController],
-  providers: [AppService, SupabaseService],
+  providers: [AppService],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
