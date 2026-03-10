@@ -1,10 +1,9 @@
 import express from 'express';
-import serverless from 'serverless-http';
 import { NestFactory } from '@nestjs/core';
 import { ExpressAdapter } from '@nestjs/platform-express';
 import { AppModule } from '../src/app.module';
 
-let cachedServer: ReturnType<typeof serverless> | null = null;
+let cachedExpressApp: ReturnType<typeof express> | null = null;
 
 async function bootstrap() {
   const expressApp = express();
@@ -48,15 +47,15 @@ async function bootstrap() {
   });
 
   await app.init();
-  return serverless(expressApp);
+  return expressApp;
 }
 
 export default async function handler(req: any, res: any) {
   try {
-    if (!cachedServer) {
-      cachedServer = await bootstrap();
+    if (!cachedExpressApp) {
+      cachedExpressApp = await bootstrap();
     }
-    return cachedServer(req, res);
+    return cachedExpressApp(req, res);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     console.error('[handler] Bootstrap error:', message);
