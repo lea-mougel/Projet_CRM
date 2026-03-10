@@ -2,6 +2,22 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 
+// Node 25 can treat some deprecations as thrown errors; keep them non-fatal.
+try {
+  (process as any).throwDeprecation = false;
+} catch {
+  // Ignore read-only runtime environments.
+}
+
+const originalEmitWarning = process.emitWarning.bind(process);
+process.emitWarning = ((warning: any, ...args: any[]) => {
+  const message = typeof warning === 'string' ? warning : warning?.message;
+  if (typeof message === 'string' && message.includes("'app.router' is deprecated")) {
+    return;
+  }
+  return originalEmitWarning(warning, ...args);
+}) as typeof process.emitWarning;
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
@@ -41,7 +57,7 @@ async function bootstrap() {
     transform: true,
   }));
 
-  const port = Number(process.env.PORT || 3002);
+  const port = Number(process.env.PORT || 3000);
   await app.listen(port);
 
   console.log(`Application is running on: ${await app.getUrl()}`);

@@ -3,18 +3,12 @@ import { NestFactory } from '@nestjs/core';
 import { ExpressAdapter } from '@nestjs/platform-express';
 import { AppModule } from '../src/app.module';
 
-// Some Vercel runtimes can treat deprecation warnings as thrown errors.
-// Express 5 emits an app.router deprecation warning during bootstrap.
-process.throwDeprecation = false;
-process.noDeprecation = true;
-const originalEmitWarning = process.emitWarning.bind(process);
-process.emitWarning = ((warning: any, ...args: any[]) => {
-  const message = typeof warning === 'string' ? warning : warning?.message;
-  if (typeof message === 'string' && message.includes("'app.router' is deprecated")) {
-    return;
-  }
-  return originalEmitWarning(warning, ...args);
-}) as typeof process.emitWarning;
+// Keep deprecations non-fatal in runtimes that enable throw-deprecation.
+try {
+  (process as any).throwDeprecation = false;
+} catch {
+  // Ignore read-only runtime environments.
+}
 
 let cachedExpressApp: ReturnType<typeof express> | null = null;
 
