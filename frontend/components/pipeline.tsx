@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { createClient } from '@supabase/supabase-js';
 import { UserRound } from 'lucide-react';
+import { contactsApi } from '../api/contacts.api';
 
 interface Lead {
   id: string;
@@ -11,7 +11,7 @@ interface Lead {
   source?: string;
   description?: string;
   estimated_value?: number;
-  contacts: { first_name: string, last_name: string };
+  contacts?: { first_name: string, last_name: string };
 }
 
 export default function Pipeline() {
@@ -22,20 +22,23 @@ export default function Pipeline() {
   useEffect(() => {
     const loadLeads = async () => {
       try {
-        const supabase = createClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL!,
-          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        );
-        const { data, error: sessionError } = await supabase.auth.getSession();
-        
-        const headers: Record<string, string> = {};
-        if (data?.session?.user?.id) {
-          headers['X-User-Id'] = data.session.user.id;
-        }
-        
-        const res = await fetch('http://localhost:3000/leads', { headers });
-        const data_leads = await res.json();
-        setLeads(data_leads);
+        const dataLeads = await contactsApi.getAllLeads();
+        const normalizedLeads: Lead[] = dataLeads.map((lead) => ({
+          id: lead.id,
+          title: lead.title,
+          amount: Number(lead.estimated_value) || 0,
+          status: lead.status,
+          source: lead.source || undefined,
+          description: lead.description || undefined,
+          estimated_value: lead.estimated_value,
+          contacts: lead.contacts
+            ? {
+                first_name: lead.contacts.first_name,
+                last_name: lead.contacts.last_name,
+              }
+            : undefined,
+        }));
+        setLeads(normalizedLeads);
       } catch (err) {
         console.error('Error loading leads:', err);
       } finally {

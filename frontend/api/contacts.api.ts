@@ -202,7 +202,39 @@ export type SendCommunicationPayload = {
   trigger_type?: 'manual' | 'automation';
 };
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+function resolveApiBaseUrl(): string {
+  const configured = process.env.NEXT_PUBLIC_API_URL?.trim();
+
+  const localhostFallback = 'http://localhost:3002';
+
+  if (configured) {
+    try {
+      const parsed = new URL(configured);
+
+      if (typeof window !== 'undefined') {
+        const currentHost = window.location.hostname;
+        const isFrontendLocalPort = parsed.hostname === currentHost && parsed.port === '3000';
+        if (!isFrontendLocalPort) {
+          return parsed.toString().replace(/\/$/, '');
+        }
+      } else if (!configured.includes('localhost:3000')) {
+        return parsed.toString().replace(/\/$/, '');
+      }
+    } catch {
+      if (configured.startsWith('http://') || configured.startsWith('https://')) {
+        return configured.replace(/\/$/, '');
+      }
+    }
+  }
+
+  if (typeof window !== 'undefined' && window.location?.hostname) {
+    return `http://${window.location.hostname}:3002`;
+  }
+
+  return localhostFallback;
+}
+
+const API_BASE_URL = resolveApiBaseUrl();
 
 async function getAuthHeaders(): Promise<Record<string, string>> {
   const { data, error } = await supabase.auth.getSession();
@@ -218,11 +250,24 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
 }
 
 async function parseResponse<T>(response: Response): Promise<T> {
+  const raw = await response.text();
+
   if (!response.ok) {
-    const body = await response.text();
-    throw new Error(body || `Erreur API (${response.status})`);
+    throw new Error(raw || `Erreur API (${response.status})`);
   }
-  return response.json() as Promise<T>;
+
+  if (!raw.trim()) {
+    return null as T;
+  }
+
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    const contentType = response.headers.get('content-type') || 'inconnu';
+    throw new Error(
+      `Réponse API invalide (JSON attendu) - URL: ${response.url} - Content-Type: ${contentType} - Extrait: ${raw.slice(0, 120)}`,
+    );
+  }
 }
 
 export const contactsApi = {
