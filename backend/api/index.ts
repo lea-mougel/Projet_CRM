@@ -14,31 +14,37 @@ async function bootstrap() {
     process.env.FRONTEND_URL,
     ...(process.env.FRONTEND_URLS?.split(',') || []),
   ]
-    .map((origin) => origin?.trim())
+    .map((origin) => origin?.trim().replace(/\/$/, '')) // strip trailing slash
     .filter((origin): origin is string => Boolean(origin));
 
   app.enableCors({
     origin: (origin: string | undefined, callback: (error: Error | null, allow?: boolean) => void) => {
+      // Allow server-to-server calls (no origin header)
       if (!origin) {
         callback(null, true);
         return;
       }
 
-      const isLocalhost = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
-      const isConfigured = configuredOrigins.includes(origin);
-      // Allow Vercel-hosted origins when FRONTEND_URL is not explicitly configured
-      const isVercelFallback = configuredOrigins.length === 0 && /^https:\/\/[a-zA-Z0-9-]+\.vercel\.app$/.test(origin);
+      const normalizedOrigin = origin.replace(/\/$/, '');
 
-      if (isLocalhost || isConfigured || isVercelFallback) {
+      const isLocalhost = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(normalizedOrigin);
+      const isConfigured = configuredOrigins.includes(normalizedOrigin);
+      // Always allow any *.vercel.app origin (both frontend and preview deployments)
+      const isVercel = /^https:\/\/[a-zA-Z0-9-]+\.vercel\.app$/.test(normalizedOrigin);
+
+      if (isLocalhost || isConfigured || isVercel) {
         callback(null, true);
         return;
       }
 
-      callback(new Error(`Origine non autorisée par CORS: ${origin}`), false);
+      console.warn(`[CORS] Origine bloquée: ${origin} | Origines configurées: ${configuredOrigins.join(', ')}`);
+      callback(null, false);
     },
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     allowedHeaders: ['Content-Type', 'Authorization', 'X-User-Id'],
     credentials: true,
+    preflightContinue: false,
+    optionsSuccessStatus: 204,
   });
 
   await app.init();
