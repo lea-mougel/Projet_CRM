@@ -4,6 +4,17 @@ import { createClient } from '@supabase/supabase-js';
 import { ShieldAlert, Megaphone, Settings, Pencil } from 'lucide-react';
 import { contactsApi } from '../api/contacts.api';
 
+// Module-level cache — survives client-side navigation (component unmount/remount)
+type DashboardCache = {
+  role: string;
+  contacts: ContactRecord[];
+  leads: LeadRecord[];
+  tasks: TaskRecord[];
+  communications: CommunicationRecord[];
+  allProfiles: ProfileRecord[];
+};
+let _dashboardCache: DashboardCache | null = null;
+
 type DashboardSession = {
   user: {
     id: string;
@@ -64,19 +75,20 @@ export default function Dashboard({ session }: { session: DashboardSession }) {
     { auth: { persistSession: true, autoRefreshToken: true } }
   ), []);
 
-  const [role, setRole] = useState<string>('chargement');
-  const [contacts, setContacts] = useState<ContactRecord[]>([]);
-  const [leads, setLeads] = useState<LeadRecord[]>([]);
-  const [tasks, setTasks] = useState<TaskRecord[]>([]);
-  const [communications, setCommunications] = useState<CommunicationRecord[]>([]);
-  const [allProfiles, setAllProfiles] = useState<ProfileRecord[]>([]);
+  const [role, setRole] = useState<string>(_dashboardCache?.role ?? 'chargement');
+  const [contacts, setContacts] = useState<ContactRecord[]>(_dashboardCache?.contacts ?? []);
+  const [leads, setLeads] = useState<LeadRecord[]>(_dashboardCache?.leads ?? []);
+  const [tasks, setTasks] = useState<TaskRecord[]>(_dashboardCache?.tasks ?? []);
+  const [communications, setCommunications] = useState<CommunicationRecord[]>(_dashboardCache?.communications ?? []);
+  const [allProfiles, setAllProfiles] = useState<ProfileRecord[]>(_dashboardCache?.allProfiles ?? []);
   const [showRoleManager, setShowRoleManager] = useState(false);
   const [taskView, setTaskView] = useState<'today' | 'tomorrow' | 'week'>('today');
   const [analyticsRange, setAnalyticsRange] = useState<'7d' | '30d' | 'month'>('month');
   const [hotLeadThreshold, setHotLeadThreshold] = useState<number>(10000);
   const [hotLeadThresholdDraft, setHotLeadThresholdDraft] = useState<string>('10000');
   const [isEditingHotLeadThreshold, setIsEditingHotLeadThreshold] = useState(false);
-  const [loading, setLoading] = useState(true);
+  // Skip blocking spinner if we already have cached data from a previous visit
+  const [loading, setLoading] = useState(_dashboardCache === null);
   const [adminMessage, setAdminMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -126,13 +138,29 @@ export default function Dashboard({ session }: { session: DashboardSession }) {
             ),
           ]);
 
-          setContacts(contactsList as ContactRecord[]);
-          setLeads(leadsList as LeadRecord[]);
-          setTasks(tasksList as TaskRecord[]);
-          setCommunications(communicationsList as CommunicationRecord[]);
+          const typedContacts = contactsList as ContactRecord[];
+          const typedLeads = leadsList as LeadRecord[];
+          const typedTasks = tasksList as TaskRecord[];
+          const typedComms = communicationsList as CommunicationRecord[];
 
           const { data: pro } = await supabase.from('profiles').select('*').order('email');
-          if (pro) setAllProfiles(pro);
+          const typedProfiles = (pro as ProfileRecord[]) ?? [];
+
+          // Save to module-level cache so returning to this page is instant
+          _dashboardCache = {
+            role: profile.role,
+            contacts: typedContacts,
+            leads: typedLeads,
+            tasks: typedTasks,
+            communications: typedComms,
+            allProfiles: typedProfiles,
+          };
+
+          setContacts(typedContacts);
+          setLeads(typedLeads);
+          setTasks(typedTasks);
+          setCommunications(typedComms);
+          if (pro) setAllProfiles(typedProfiles);
         }
       } else {
         setRole('user');

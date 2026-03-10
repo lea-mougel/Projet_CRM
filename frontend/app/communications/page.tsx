@@ -16,13 +16,23 @@ type CommercialProfile = {
   role: string;
 };
 
+// Module-level cache — survives client-side navigation
+type CommsCache = {
+  currentUser: CurrentUser;
+  communications: Communication[];
+  contacts: Contact[];
+  leads: Lead[];
+  commercials: CommercialProfile[];
+};
+let _commsCache: CommsCache | null = null;
+
 export default function CommunicationsPage() {
   const router = useRouter();
-  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
-  const [communications, setCommunications] = useState<Communication[]>([]);
-  const [contacts, setContacts] = useState<Contact[]>([]);
-  const [leads, setLeads] = useState<Lead[]>([]);
-  const [commercials, setCommercials] = useState<CommercialProfile[]>([]);
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(_commsCache?.currentUser ?? null);
+  const [communications, setCommunications] = useState<Communication[]>(_commsCache?.communications ?? []);
+  const [contacts, setContacts] = useState<Contact[]>(_commsCache?.contacts ?? []);
+  const [leads, setLeads] = useState<Lead[]>(_commsCache?.leads ?? []);
+  const [commercials, setCommercials] = useState<CommercialProfile[]>(_commsCache?.commercials ?? []);
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'sent' | 'failed'>('all');
   const [recipientType, setRecipientType] = useState<'contact' | 'lead' | 'commercial' | 'custom'>('contact');
   const [selectedContactId, setSelectedContactId] = useState('');
@@ -44,7 +54,7 @@ export default function CommunicationsPage() {
   const [automationMessage, setAutomationMessage] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [sendMessage, setSendMessage] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(_commsCache === null);
 
   const loadCommunications = async () => {
     const list = await contactsApi.getCommunications();
@@ -82,7 +92,8 @@ export default function CommunicationsPage() {
           return;
         }
 
-        setCurrentUser({ id: session.user.id, role });
+        const user: CurrentUser = { id: session.user.id, role };
+        setCurrentUser(user);
         const [communicationsList, contactsList, leadsList] = await Promise.all([
           contactsApi.getCommunications(),
           contactsApi.getAll('', role === 'admin'),
@@ -98,7 +109,17 @@ export default function CommunicationsPage() {
           .in('role', ['commercial', 'admin'])
           .order('email');
 
-        setCommercials((profiles as CommercialProfile[]) ?? []);
+        const typedCommercials = (profiles as CommercialProfile[]) ?? [];
+        setCommercials(typedCommercials);
+
+        // Save to module-level cache so returning to this page is instant
+        _commsCache = {
+          currentUser: user,
+          communications: communicationsList,
+          contacts: contactsList,
+          leads: leadsList,
+          commercials: typedCommercials,
+        };
 
         if (role === 'admin') {
           try {
