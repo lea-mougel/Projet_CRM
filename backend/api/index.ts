@@ -3,6 +3,11 @@ import { NestFactory } from '@nestjs/core';
 import { ExpressAdapter } from '@nestjs/platform-express';
 import { AppModule } from '../src/app.module';
 
+// Some Vercel runtimes can treat deprecation warnings as thrown errors.
+// Express 5 emits an app.router deprecation warning during bootstrap.
+process.throwDeprecation = false;
+process.noDeprecation = true;
+
 let cachedExpressApp: ReturnType<typeof express> | null = null;
 
 async function bootstrap() {
