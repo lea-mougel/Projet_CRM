@@ -16,6 +16,10 @@ export class AppController {
 
   @Get('health')
   async health() {
+    const initError = this.supabaseService.initError;
+    if (initError) {
+      return { status: 'config_error', message: initError };
+    }
     try {
       const client = this.supabaseService.getClient();
       const { error } = await client.from('profiles').select('id').limit(1);
@@ -25,7 +29,6 @@ export class AppController {
         env: {
           hasUrl: !!process.env.SUPABASE_URL,
           hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-          hasKey: !!process.env.SUPABASE_KEY,
           frontendUrl: process.env.FRONTEND_URL || '(not set)',
         },
       };

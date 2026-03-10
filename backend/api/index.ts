@@ -52,8 +52,14 @@ async function bootstrap() {
 }
 
 export default async function handler(req: any, res: any) {
-  if (!cachedServer) {
-    cachedServer = await bootstrap();
+  try {
+    if (!cachedServer) {
+      cachedServer = await bootstrap();
+    }
+    return cachedServer(req, res);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error('[handler] Bootstrap error:', message);
+    res.status(500).json({ status: 'bootstrap_error', message });
   }
-  return cachedServer(req, res);
 }
