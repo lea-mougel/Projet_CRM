@@ -38,6 +38,8 @@ npm run dev
 - Gestion des contacts, entreprises et leads
 - Pipeline de vente avec visualisation colonnes/tableau
 - Insights pipeline avec affichage selon rôle
+- Gestion des tâches
+- Communications par email via Brevo (envoi + historique + automation)
 - Module admin pour pilotage des commerciaux
 
 ## Comportement par rôle

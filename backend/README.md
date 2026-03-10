@@ -8,7 +8,7 @@ Backend API du CRM construit avec NestJS + TypeScript, connecté à Supabase/Pos
 - npm
 - Variables d'environnement (Supabase + config API) selon votre `.env`
 
-### Variables d'environnement (Feature 7 - Brevo)
+### Variables d'environnement (Brevo)
 
 Ajouter dans `.env`:
 
@@ -17,11 +17,6 @@ BREVO_API_KEY=...
 BREVO_SENDER_EMAIL=...
 BREVO_SENDER_NAME=CRM
 ```
-
-### SQL à exécuter (Feature 7)
-
-- Historique des communications: `backend/sql/feature7_step1_communications.sql`
-- Toggle admin des auto-envois: `backend/sql/feature7_step3_automation_settings.sql`
 
 ## Installation
 
@@ -52,7 +47,10 @@ npm run test:e2e
 
 - `auth/` : rôles et garde d'accès
 - `contacts/` : endpoints contacts
+- `companies/` : endpoints entreprises
 - `leads/` : endpoints leads
+- `tasks/` : endpoints tâches
+- `communications/` : envoi et historique des communications (Brevo)
 - `supabase/` : service d'accès Supabase
 
 ## Sécurité et rôles
@@ -64,7 +62,9 @@ npm run test:e2e
 ## Endpoints métiers (résumé)
 
 - Contacts: CRUD + recherche
+- Companies: `GET /companies/:id`, `POST /companies`, `PATCH /companies/:id`, `DELETE /companies/:id`
 - Leads: CRUD + mise à jour des statuts de pipeline
+- Tasks: `GET /tasks`, `POST /tasks`, `PATCH /tasks/:id`, `DELETE /tasks/:id`
 - Profils utilisateurs: récupération du rôle pour pilotage frontend
 - Communications:
 	- `GET /communications`
@@ -77,5 +77,8 @@ npm run test:e2e
 - `src/main.ts` : bootstrap Nest
 - `src/app.module.ts` : module racine
 - `src/contacts/` : logique contacts
+- `src/companies/` : logique entreprises
 - `src/leads/` : logique leads
+- `src/tasks/` : logique tâches
+- `src/communications/` : logique communications/Brevo
 - `src/auth/roles.guard.ts` : guard de rôles

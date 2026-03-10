@@ -62,8 +62,11 @@ npm run start    # lancement du build
 ## Pages principales
 
 - `/login`, `/signup`
-- `/contacts`, `/companies`, `/leads`
+- `/contacts`, `/my-contacts`
+- `/companies`, `/leads`
 - `/pipeline`
+- `/tasks`
+- `/communications`
 - `/commercials` (admin)
 - `/commercial/[id]` (admin)
 
