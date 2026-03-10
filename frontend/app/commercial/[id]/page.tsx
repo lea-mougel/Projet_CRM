@@ -23,6 +23,7 @@ export default function CommercialDetailPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [commercial, setCommercial] = useState<{ id: string; email: string } | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const supabase = useMemo(
     () =>
@@ -37,12 +38,42 @@ export default function CommercialDetailPage() {
 
   const loadLeads = useCallback(async () => {
     try {
+      setLoadError(null);
       const data = await contactsApi.getAllLeads();
       setLeads(data);
     } catch (error) {
       console.error('Erreur chargement leads:', error);
+      try {
+        const { data, error: sbError } = await supabase
+          .from('leads')
+          .select(`
+            *,
+            contacts:contact_id (
+              id,
+              first_name,
+              last_name,
+              email
+            ),
+            companies:company_id (
+              id,
+              name,
+              industry
+            ),
+            assigned_commercial:assigned_to (
+              id,
+              email
+            )
+          `)
+          .order('created_at', { ascending: false });
+
+        if (sbError) throw sbError;
+        setLeads((data || []) as Lead[]);
+      } catch (fallbackError) {
+        console.error('Erreur fallback Supabase leads:', fallbackError);
+        setLoadError('Impossible de charger les leads de ce commercial.');
+      }
     }
-  }, []);
+  }, [supabase]);
 
   const loadContacts = useCallback(async () => {
     try {
@@ -50,8 +81,24 @@ export default function CommercialDetailPage() {
       setContacts(data);
     } catch (error) {
       console.error('Erreur chargement contacts:', error);
+      try {
+        const { data, error: sbError } = await supabase
+          .from('contacts')
+          .select(`
+            *,
+            assigned_commercial:profiles!contacts_assigned_to_fkey ( email ),
+            company:companies!contacts_company_id_fkey ( name, address, town )
+          `)
+          .order('last_name', { ascending: true });
+
+        if (sbError) throw sbError;
+        setContacts((data || []) as Contact[]);
+      } catch (fallbackError) {
+        console.error('Erreur fallback Supabase contacts:', fallbackError);
+        setLoadError('Impossible de charger les contacts de ce commercial.');
+      }
     }
-  }, []);
+  }, [supabase]);
 
   const loadCommercial = useCallback(async () => {
     try {
@@ -157,6 +204,11 @@ export default function CommercialDetailPage() {
 
       {/* Contenu */}
       <div className="max-w-7xl mx-auto px-6 py-8">
+        {loadError && (
+          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+            {loadError}
+          </div>
+        )}
         <div className="bg-white rounded-2xl shadow-lg p-8">
           <CommercialAnalysis
             leads={leads}

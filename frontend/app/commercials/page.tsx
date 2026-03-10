@@ -18,6 +18,7 @@ export default function CommercialsPage() {
   const [loading, setLoading] = useState(true);
   const [commercials, setCommercials] = useState<Array<{ id: string; email: string }>>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const supabase = useMemo(
     () =>
@@ -48,12 +49,43 @@ export default function CommercialsPage() {
 
   const loadLeads = useCallback(async () => {
     try {
+      setLoadError(null);
       const data = await contactsApi.getAllLeads();
       setLeads(data);
     } catch (error) {
       console.error('Erreur chargement leads:', error);
+      try {
+        // Fallback: query Supabase directly for deployed environments where API routing can fail.
+        const { data, error: sbError } = await supabase
+          .from('leads')
+          .select(`
+            *,
+            contacts:contact_id (
+              id,
+              first_name,
+              last_name,
+              email
+            ),
+            companies:company_id (
+              id,
+              name,
+              industry
+            ),
+            assigned_commercial:assigned_to (
+              id,
+              email
+            )
+          `)
+          .order('created_at', { ascending: false });
+
+        if (sbError) throw sbError;
+        setLeads((data || []) as Lead[]);
+      } catch (fallbackError) {
+        console.error('Erreur fallback Supabase leads:', fallbackError);
+        setLoadError('Impossible de charger les leads pour les commerciaux.');
+      }
     }
-  }, []);
+  }, [supabase]);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -122,6 +154,11 @@ export default function CommercialsPage() {
 
       {/* Contenu */}
       <div className="max-w-7xl mx-auto px-6 py-8">
+        {loadError && (
+          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+            {loadError}
+          </div>
+        )}
         <CommercialsList commercials={commercials} leads={leads} />
       </div>
     </div>
