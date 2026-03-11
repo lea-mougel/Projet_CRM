@@ -1,4 +1,4 @@
-# Use Cases - CRM (Version actuelle)
+# Use Cases - CRM (etat reel du projet)
 
 ## Acteurs
 
@@ -8,101 +8,120 @@
 
 ---
 
-## Cas d'usage implémentés
+## Cas d'usage implementes
 
-### 1) Authentification
+### 1) Authentification et session
 
-- UC-001 Se connecter (tous)
+- UC-001 Se connecter (Supabase Auth)
 - UC-002 S'inscrire (visiteur)
-- UC-003 Se déconnecter (tous)
-- UC-004 Résoudre le rôle utilisateur depuis le profil (app)
+- UC-003 Se deconnecter
+- UC-004 Resoudre le role utilisateur depuis `profiles` (frontend + backend)
 
-### 2) Contacts
+### 2) Accueil / Dashboard
 
-- UC-005 Consulter la liste de contacts
-- UC-006 Rechercher/filtrer les contacts
-- UC-007 Créer un contact
-- UC-008 Modifier un contact
-- UC-009 Supprimer un contact (admin)
-- UC-010 Consulter l'historique d'interactions
-- UC-011 Ajouter une note d'interaction
+- UC-005 Acceder au tableau de bord apres authentification
+- UC-006 Afficher un ecran d'acces restreint pour le role `user`
+- UC-007 Voir des KPI/analytics (leads, pipeline, communications, taches)
+- UC-008 Filtrer certaines analyses par periode (7j/30j/mois)
+- UC-009 (Admin) Ouvrir la console admin depuis l'accueil
+- UC-010 (Admin) Modifier le role d'un membre (rotation user/commercial/admin)
 
-### 3) Entreprises
+### 3) Contacts
 
-- UC-012 Consulter la liste des entreprises
-- UC-013 Rechercher une entreprise
-- UC-014 Créer une entreprise
-- UC-015 Modifier une entreprise
-- UC-016 Lier contacts et entreprises
+- UC-011 Consulter les contacts
+- UC-012 Basculer entre "Mes contacts" et "Tous les contacts" (selon role/contexte)
+- UC-013 Rechercher et filtrer les contacts (texte, commercial, entreprise)
+- UC-014 Creer un contact
+- UC-015 Modifier un contact
+- UC-016 Supprimer un contact
+- UC-017 Consulter l'historique (notes/interactions) d'un contact
+- UC-018 Ajouter une note d'interaction (note, appel, email, reunion)
 
-### 4) Leads
+### 4) Entreprises
 
-- UC-017 Consulter la liste des leads
-- UC-018 Créer un lead
-- UC-019 Modifier un lead
-- UC-020 Supprimer un lead (admin)
-- UC-021 Changer le statut d'un lead
+- UC-019 Consulter la liste des entreprises
+- UC-020 Rechercher une entreprise
+- UC-021 Creer une entreprise
+- UC-022 Modifier une entreprise
+- UC-023 Supprimer une entreprise
+- UC-024 Ouvrir la fiche entreprise (infos + contacts + leads)
+- UC-025 Associer un contact existant a une entreprise
+- UC-026 Creer un nouveau contact depuis la fiche entreprise
 
-### 5) Pipeline & Insights
+### 5) Leads
 
-- UC-022 Consulter la page pipeline
-- UC-023 Basculer pipeline colonnes/tableau
-- UC-024 Consulter les insights pipeline
-- UC-025 Filtrer l'affichage selon le rôle
-  - admin: insights globaux + performance par commercial
-  - commercial: insights sans performance inter-commerciaux
-  - pipeline: admin = globale uniquement, commercial = personnelle uniquement
+- UC-027 Consulter la liste des leads
+- UC-028 Ouvrir le detail d'un lead
+- UC-029 Creer un lead
+- UC-030 Modifier un lead
+- UC-031 Supprimer un lead
+- UC-032 Changer le statut d'un lead sur les etapes pipeline
 
-### 6) Module commerciaux (admin)
+### 6) Pipeline et insights
 
-- UC-026 Accéder à la page Commerciaux via la sidebar
-- UC-027 Rechercher un commercial par nom/mail
-- UC-028 Trier la liste des commerciaux (asc/desc) par:
-  - nom/mail
+- UC-033 Consulter la page pipeline
+- UC-034 Basculer l'affichage pipeline (Colonnes/Tableau)
+- UC-035 Consulter les insights pipeline
+- UC-036 Filtrer l'affichage selon le role:
+  - admin: pipeline global + insights globaux
+  - commercial: pipeline personnel (leads assignes) + insights personnels
+
+### 7) Module Commerciaux (admin)
+
+- UC-037 Acceder a la page Commerciaux via la sidebar (admin)
+- UC-038 Rechercher un commercial (email)
+- UC-039 Trier la liste des commerciaux (asc/desc) par:
+  - email
   - montant en attente
   - % conversion
-  - montant gagné
-- UC-029 Ouvrir le détail d'un commercial
-- UC-030 Consulter les sous-onglets du commercial:
+  - montant gagne
+- UC-040 Ouvrir le detail d'un commercial
+- UC-041 Consulter les sous-onglets du commercial:
   - Contacts
-  - Pipeline (même visuel que côté commercial)
+  - Pipeline
   - Insights
-  - Détails des leads
+  - Details des leads
 
-### 7) Tâches
+### 8) Taches
 
-- UC-031 Consulter la liste des tâches
-- UC-032 Créer une tâche liée à un contact ou un lead
-- UC-033 Modifier une tâche (titre, date, statut)
-- UC-034 Supprimer une tâche
-- UC-035 Marquer une tâche comme terminée/non terminée
+- UC-042 Consulter la liste des taches
+- UC-043 Filtrer les taches (toutes / a faire / terminees)
+- UC-044 Creer une tache liee a un contact ou un lead
+- UC-045 Modifier une tache (titre, date, lien, statut)
+- UC-046 Supprimer une tache
+- UC-047 Marquer une tache comme terminee/non terminee
 
-### 8) Communications et emailing
+### 9) Communications et emailing
 
-- UC-036 Consulter l'historique des communications
-- UC-037 Envoyer un email manuel
-- UC-038 Filtrer les communications par statut
-- UC-039 Configurer les règles d'automatisation (admin)
-- UC-040 Activer/désactiver l'automatisation (admin)
+- UC-048 Consulter l'historique des communications
+- UC-049 Filtrer les communications par statut
+- UC-050 Envoyer un email manuel (contact/lead/commercial/email libre)
+- UC-051 Historiser le resultat d'envoi (pending/sent/failed)
+- UC-052 (Admin) Consulter les parametres d'automatisation
+- UC-053 (Admin) Activer/desactiver l'automatisation
+- UC-054 (Admin) Configurer les regles d'auto-envoi (sujet, corps, cooldown, limite/jour, cible)
 
 ---
 
-## Permissions synthétiques
+## Permissions synthetiques (etat actuel)
 
 | Cas | Admin | Commercial | User |
 |---|---|---|---|
 | Authentification | Oui | Oui | Oui |
-| Contacts | Oui | Oui | Limité |
-| Entreprises | Oui | Oui | Limité |
+| Accueil / Dashboard | Oui | Oui | Oui (ecran restreint) |
+| Gestion roles utilisateurs | Oui | Non | Non |
+| Contacts | Oui | Oui | Non |
+| Entreprises | Oui | Oui | Non |
 | Leads | Oui | Oui | Non |
-| Tâches | Oui | Oui | Non |
+| Taches | Oui | Oui | Non |
 | Communications | Oui | Oui | Non |
-| Paramètres automation | Oui | Non | Non |
-| Pipeline | Oui (global uniquement) | Oui (personnel uniquement) | Non |
-| Commerciaux (sidebar + détail) | Oui | Non | Non |
+| Parametres automation | Oui | Non | Non |
+| Pipeline | Oui (global) | Oui (personnel) | Non |
+| Commerciaux (liste + detail) | Oui | Non | Non |
 
 ---
 
-## Backlog non implémenté
+## Notes d'alignement technique
 
-- Dashboard analytique avancé complet (feature 8)
+- Les restrictions de role sont appliquees principalement au niveau frontend (redirections et ecrans d'acces).
+- Cote backend, certaines restrictions sont appliquees par filtrage (ex: donnees commerciales personnelles) et/ou verifications ponctuelles (ex: automation admin).
